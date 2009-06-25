@@ -1,5 +1,6 @@
 module Iterator (
-  Iterator, IteratesT, evalIteratesT, iterator, next, nil, yield
+  Iterator, IteratesT,
+  evalIteratesT, cons, iterator, next, nil, takeRest
   ) where
 
 import Control.Monad.State (StateT, evalStateT, get, put)
@@ -14,8 +15,8 @@ iterator = CIterator
 nil :: Monad m => Iterator' v m
 nil = return Nothing
 
-yield :: Monad m => v -> Iterator' v m -> Iterator' v m
-yield v = return . Just . ((,) v) . iterator
+cons :: Monad m => v -> Iterator' v m -> Iterator' v m
+cons v = return . Just . ((,) v) . iterator
 
 type IteratesT' v m a = StateT (Maybe (Iterator v m)) m a
 newtype IteratesT v m a = CIteratesT {
@@ -36,10 +37,10 @@ evalIteratesT (CIteratesT i) = evalStateT i . Just
 next :: Monad m => IteratesT v m (Maybe v)
 next =
   CIteratesT $ do
-    x <- get
-    case x of
-      Nothing -> return Nothing
-      Just (CIterator getNext) -> r =<< lift getNext
+  x <- get
+  case x of
+    Nothing -> return Nothing
+    Just (CIterator getNext) -> r =<< lift getNext
   where
     r Nothing = do
       put Nothing
@@ -47,4 +48,13 @@ next =
     r (Just (val, iter)) = do
       put $ Just iter
       return $ Just val
+
+takeRest :: Monad m => IteratesT v m (Iterator v m)
+takeRest =
+  CIteratesT $ do
+  it <- get
+  put Nothing
+  case it of
+    Nothing -> return . iterator $ return Nothing
+    Just x -> return x
 

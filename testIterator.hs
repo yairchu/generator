@@ -1,4 +1,5 @@
 import Iterator
+import Iterator.Tools
 
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
@@ -7,9 +8,9 @@ testIterator :: Iterator Int IO
 testIterator =
   iterator $ do
   putStrLn "hello"
-  yield 1 $ do
+  cons 1 $ do
   putStrLn "world"
-  yield 10 $ do
+  cons 10 $ do
   putStrLn "bye"
   nil 
 
@@ -27,7 +28,7 @@ main :: IO ()
 main = do
   print =<< toList testIterator
   putStrLn ""
-  print =<< evalIteratesT r testIterator
+  print =<< evalIteratesT r (imap (+ 1) testIterator)
   where
     r = do
       lift . print =<< next

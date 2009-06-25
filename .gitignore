@@ -1,1 +1,3 @@
-.testIterator.hs.swp
+*.swp
+*.hi
+*.o
