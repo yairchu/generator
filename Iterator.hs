@@ -1,6 +1,8 @@
+{-# OPTIONS -O2 -Wall #-}
+
 module Iterator (
   Iterator, IteratesT,
-  evalIteratesT, cons, iterator, next, nil, takeRest
+  evalIteratesT, cons, cons', iterator, next, nil, takeRest
   ) where
 
 import Control.Monad.State (StateT, evalStateT, get, put)
@@ -16,7 +18,10 @@ nil :: Monad m => Iterator' v m
 nil = return Nothing
 
 cons :: Monad m => v -> Iterator' v m -> Iterator' v m
-cons v = return . Just . ((,) v) . iterator
+cons v = cons' v . iterator
+
+cons' :: Monad m => v -> Iterator v m -> Iterator' v m
+cons' v = return . Just . ((,) v)
 
 type IteratesT' v m a = StateT (Maybe (Iterator v m)) m a
 newtype IteratesT v m a = CIteratesT {
