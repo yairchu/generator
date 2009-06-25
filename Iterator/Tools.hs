@@ -1,12 +1,21 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Iterator.Tools (
-  imap, itake
+  ifoldr, imap, itake
   ) where
 
 import Iterator
 
 import Control.Monad.Trans (lift)
+
+ifoldr :: (Monad m) => (a -> m b -> m b) -> m b -> Iterator a m -> m b
+ifoldr consFunc nilFunc iter =
+  evalIteratesT (r =<< next) iter
+  where
+    r Nothing = lift nilFunc
+    r (Just v) = do
+      rest <- takeRest
+      lift . consFunc v $ ifoldr consFunc nilFunc rest
 
 imap :: Monad m => (a -> b) -> Iterator a m -> Iterator b m
 imap func iter =
