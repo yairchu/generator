@@ -1,10 +1,10 @@
 {-# OPTIONS -O2 -Wall #-}
 
-module Iterator.Tools (
+module Data.Iterator.Tools (
   ifoldr, ifoldl, imap, ifilter, itake, iTakeWhile
   ) where
 
-import Iterator
+import Data.Iterator
 
 import Control.Monad.Trans (lift)
 

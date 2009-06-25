@@ -1,0 +1,21 @@
+Name:                iterator
+Version:             0.0
+Synopsis:            Iterator and IteratesT. Like Python generator
+Description:
+  .
+  Iterator type and IteratesT monad transformer for implementing Python-like generators and their consumers
+
+License:             GPL
+Author:              Yair Chuchem
+Maintainer:          yairchu@gmail.com
+Cabal-Version:       >= 1.2
+Stability:           experiemental
+Build-type:          Simple
+
+Library
+  hs-Source-Dirs:      src
+  Extensions:
+  Build-Depends:       base, haskell98, mtl
+  Exposed-modules:     Data.Iterator,
+                       Data.Iterator.Tools
+  ghc-options:         -Wall

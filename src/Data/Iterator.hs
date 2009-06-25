@@ -1,6 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
-module Iterator (
+-- Should it be Data.Iterator, Control.Iterator, or something else?
+
+module Data.Iterator (
   Iterator, IteratesT,
   evalIteratesT, cons, cons',
   iterator, mmerge, next, nil, takeRest
