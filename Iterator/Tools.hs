@@ -18,13 +18,7 @@ ifoldr consFunc nilFunc iter =
       lift . consFunc v $ ifoldr consFunc nilFunc rest
 
 imap :: Monad m => (a -> b) -> Iterator a m -> Iterator b m
-imap func iter =
-  iterator $ evalIteratesT (r =<< next) iter
-  where
-    r Nothing = lift nil
-    r (Just v) = do
-      rest <- takeRest
-      lift . cons' (func v) $ imap func rest
+imap func = iterator . ifoldr (cons . func) nil
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
 itake 0 _ = iterator nil

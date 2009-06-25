@@ -2,7 +2,8 @@
 
 module Iterator (
   Iterator, IteratesT,
-  evalIteratesT, cons, cons', iterator, next, nil, takeRest
+  evalIteratesT, cons, cons',
+  iterator, mmerge, next, nil, takeRest
   ) where
 
 import Control.Monad.State (StateT, evalStateT, get, put)
@@ -13,6 +14,12 @@ newtype Iterator v m = CIterator (Iterator' v m)
 
 iterator :: Iterator' v m -> Iterator v m
 iterator = CIterator
+
+mmerge :: Monad m => m (Iterator v m) -> Iterator v m
+mmerge mIter =
+  iterator $ do
+  CIterator iter <- mIter
+  iter
 
 nil :: Monad m => Iterator' v m
 nil = return Nothing
