@@ -23,7 +23,7 @@ ifoldl func startVal =
     r Nothing = return startVal
     r (Just v) =
       lift (func startVal v) >>=
-      processRest . ifoldl func >>= lift
+      processRest . ifoldl func
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: (Monad m) => (a -> m b -> m b) -> m b -> Iterator a m -> m b
@@ -32,7 +32,7 @@ ifoldr consFunc nilFunc =
   where
     r Nothing = lift nilFunc
     r (Just v) =
-      lift . consFunc v =<< processRest (ifoldr consFunc nilFunc)
+      lift . consFunc v =<< processRest (return . ifoldr consFunc nilFunc)
 
 -- for operations that build Iterators, combine step with the mmerge etc boiler-plate
 ifoldr' :: Monad m => (b -> Iterator a m -> Iterator a m) -> Iterator a m -> Iterator b m -> Iterator a m

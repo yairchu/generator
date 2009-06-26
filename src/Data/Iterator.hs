@@ -70,10 +70,10 @@ next =
       put $ Just iter
       return $ Just val
 
-processRest :: Monad m => (Iterator a m -> m b) -> IteratesT a m (m b)
+processRest :: Monad m => (Iterator a m -> m b) -> IteratesT a m b
 processRest func =
   CIteratesT $ do
   rest <- get
   put Nothing
-  return . func $ fromMaybe empty rest
+  lift . func $ fromMaybe empty rest
 
