@@ -45,11 +45,14 @@ ifoldr' consFunc start =
 imap :: Monad m => (a -> b) -> Iterator a m -> Iterator b m
 imap func = ifoldr' (cons . func) empty
 
-ifilter :: Monad m => (a -> Bool) -> Iterator a m -> Iterator a m
-ifilter func =
+ifilter :: Monad m => (a -> m Bool) -> Iterator a m -> Iterator a m
+ifilter cond =
   ifoldr' r empty
   where
-    r x = if func x then cons x else id
+    r x xs =
+      mmerge $ do
+      b <- cond x
+      return $ if b then cons x xs else xs
 
 -- uses ifoldl because I think with ifoldr it would use much mem, right?
 toList :: (Monad m) => Iterator a m -> m [a]
