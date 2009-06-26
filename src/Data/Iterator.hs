@@ -4,7 +4,7 @@
 
 module Data.Iterator (
   Iterator, IteratesT,
-  evalIteratesT, cons, cons',
+  empty, evalIteratesT, cons, cons',
   iterator, mmerge, next, nil, takeRest
   ) where
 
@@ -25,6 +25,9 @@ mmerge mIter =
 
 nil :: Monad m => Iterator' v m
 nil = return Nothing
+
+empty :: Monad m => Iterator v m
+empty = iterator nil
 
 cons :: Monad m => v -> Iterator' v m -> Iterator' v m
 cons v = cons' v . iterator

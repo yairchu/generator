@@ -1,7 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Data.Iterator.Tools (
-  ifoldr, ifoldl, imap, ifilter, itake, iTakeWhile, toList
+  fromList, ifoldr, ifoldl, imap,
+  ifilter, itake, iTakeWhile, toList
   ) where
 
 import Control.Monad (liftM)
@@ -52,6 +53,9 @@ iTakeWhile func =
   iterator . ifoldr r nil
   where
     r x xs = if func x then cons x xs else nil
+
+fromList :: (Monad m) => [a] -> Iterator a m
+fromList = iterator . foldr (cons) nil
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
 itake 0 _ = iterator nil
