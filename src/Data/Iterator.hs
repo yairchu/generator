@@ -5,11 +5,12 @@
 module Data.Iterator (
   Iterator, IteratesT,
   empty, evalIteratesT, cons, cons',
-  iterator, mmerge, next, nil 
+  iterator, mmerge, next, nil, processRest
   ) where
 
 import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
+import Data.Maybe (fromMaybe)
 
 type Iterator' v m = m (Maybe (v, Iterator v m))
 newtype Iterator v m = CIterator (Iterator' v m)
@@ -68,4 +69,11 @@ next =
     r (Just (val, iter)) = do
       put $ Just iter
       return $ Just val
+
+processRest :: Monad m => (Iterator a m -> m b) -> IteratesT a m (m b)
+processRest func =
+  CIteratesT $ do
+  rest <- get
+  put Nothing
+  return . func $ fromMaybe empty rest
 

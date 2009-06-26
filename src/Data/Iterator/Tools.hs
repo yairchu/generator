@@ -8,7 +8,8 @@ module Data.Iterator.Tools (
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
 import Data.Iterator (
-  Iterator, cons, empty, evalIteratesT, mmerge, next)
+  Iterator, cons, empty, evalIteratesT,
+  mmerge, next, processRest)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convinient importing
@@ -16,22 +17,22 @@ import Data.Iterator (
 -- a strict foldl
 ifoldl :: (Monad m) => (a -> b -> a) -> a -> Iterator b m -> m a
 ifoldl func startVal =
-  evalIteratesT $ r0 startVal
+  evalIteratesT $ r =<< next
   where
-    r0 s = r1 s =<< next
-    r1 s Nothing = return s
-    r1 s (Just v) = do
-      let s' = func s v
-      seq s' $ r0 s'
+    r Nothing = return startVal
+    r (Just v) =
+      lift =<< (processRest . seq s) (ifoldl func s)
+      where
+        s = func startVal v
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: (Monad m) => (a -> m b -> m b) -> m b -> Iterator a m -> m b
 ifoldr consFunc nilFunc =
-  evalIteratesT r0
+  evalIteratesT $ r =<< next
   where
-    r0 = r1 =<< next
-    r1 Nothing = lift nilFunc
-    r1 (Just v) = lift . consFunc v . return =<< r0
+    r Nothing = lift nilFunc
+    r (Just v) =
+      lift . consFunc v =<< processRest (ifoldr consFunc nilFunc)
 
 -- for operations that build Iterators, combine step with the mmerge etc boiler-plate
 ifoldr' :: Monad m => (b -> Iterator a m -> Iterator a m) -> Iterator a m -> Iterator b m -> Iterator a m
