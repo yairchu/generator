@@ -1,5 +1,5 @@
-import Iterator
-import Iterator.Tools
+import Data.Iterator
+import Data.Iterator.Tools
 
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
@@ -8,21 +8,11 @@ testIterator :: Iterator Int IO
 testIterator =
   iterator $ do
   putStrLn "hello"
-  cons 1 $ do
+  cons' 1 $ do
   putStrLn "world"
-  cons 10 $ do
+  cons' 10 $ do
   putStrLn "bye"
-  nil 
-
-toList :: Monad m => Iterator v m -> m [v]
-toList iter =
-  liftM reverse $ evalIteratesT (r []) iter
-  where
-    r soFar = do
-      x <- next
-      case x of
-        Nothing -> return soFar
-        Just v -> r $ v:soFar
+  nil
 
 main :: IO ()
 main = do
