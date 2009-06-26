@@ -3,20 +3,21 @@
 module Data.Iterator.Tools (
   append, execute, fromList, iconcat,
   ifoldl, ifoldr, ifoldr', ilength, imap,
-  ifilter, itake, iTakeWhile, toList
+  ifilter, itake, iTakeWhile, toList,
+  toIteratesT
   ) where
 
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
 import Data.Iterator (
-  Iterator, cons, empty, evalIteratesT,
+  IteratesT, Iterator, cons, empty, evalIteratesT,
   mmerge, next, processRest)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convinient importing
 
 -- a strict foldl
-ifoldl :: (Monad m) => (a -> b -> m a) -> a -> Iterator b m -> m a
+ifoldl :: Monad m => (a -> b -> m a) -> a -> Iterator b m -> m a
 ifoldl func startVal =
   evalIteratesT $ r startVal =<< next
   where
@@ -26,13 +27,13 @@ ifoldl func startVal =
       r x =<< next
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
-ifoldr :: (Monad m) => (a -> m b -> m b) -> m b -> Iterator a m -> m b
+ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Iterator a m -> m b
 ifoldr consFunc nilFunc =
   evalIteratesT $ r =<< next
   where
     r Nothing = lift nilFunc
     r (Just v) =
-      lift . consFunc v =<< processRest (return . ifoldr consFunc nilFunc)
+      lift . consFunc v =<< processRest (ifoldr consFunc nilFunc)
 
 -- for operations that build Iterators, combine step with the mmerge etc boiler-plate
 ifoldr' :: Monad m => (b -> Iterator a m -> Iterator a m) -> Iterator a m -> Iterator b m -> Iterator a m
@@ -97,4 +98,8 @@ itake count =
     r1 c (Just v) = do
       rest <- r0 (c-1)
       return $ cons v rest
+
+-- opposite of evalIteratesT
+toIteratesT :: Monad m => (Iterator v m -> m a) -> IteratesT v m a
+toIteratesT process = lift =<< processRest process
 

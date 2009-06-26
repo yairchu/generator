@@ -36,6 +36,8 @@ cons'' v = return . Just . ((,) v)
 cons :: Monad m => a -> Iterator a m -> Iterator a m
 cons v = iterator . cons'' v
 
+-- when constructing iterators
+-- sometimes it's easier to do "cons' $ do"
 cons' :: Monad m => v -> Iterator' v m -> Iterator' v m
 cons' v = cons'' v . iterator
 
@@ -70,10 +72,11 @@ next =
       put $ Just iter
       return $ Just val
 
-processRest :: Monad m => (Iterator a m -> m b) -> IteratesT a m b
-processRest func =
+processRest :: Monad m => (Iterator a m -> m b) -> IteratesT a m (m b)
+processRest process =
   CIteratesT $ do
-  rest <- get
+  mRest <- get
+  let rest = fromMaybe empty mRest
   put Nothing
-  lift . func $ fromMaybe empty rest
+  return $ process rest
 
