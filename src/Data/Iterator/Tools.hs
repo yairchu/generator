@@ -18,12 +18,12 @@ import Data.Iterator (
 -- a strict foldl
 ifoldl :: (Monad m) => (a -> b -> m a) -> a -> Iterator b m -> m a
 ifoldl func startVal =
-  evalIteratesT $ r =<< next
+  evalIteratesT $ r startVal =<< next
   where
-    r Nothing = return startVal
-    r (Just v) =
-      lift (func startVal v) >>=
-      processRest . ifoldl func
+    r s Nothing = return s
+    r s (Just v) = do
+      x <- lift (func s v)
+      r x =<< next
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: (Monad m) => (a -> m b -> m b) -> m b -> Iterator a m -> m b
