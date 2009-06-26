@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Data.Iterator.Tools (
-  append, fromList, ifoldr, ifoldl, imap,
+  append, fromList, iconcat, ifoldl, ifoldr, ifoldr', imap,
   ifilter, itake, iTakeWhile, toList
   ) where
 
@@ -57,11 +57,18 @@ iTakeWhile func =
 fromList :: (Monad m) => [a] -> Iterator a m
 fromList = iterator . foldr cons' nil
 
-append :: Monad m => Iterator a m -> Iterator a m -> Iterator a m
-append a b =
-  mmerge $ ifoldr step (return b) a
+-- for operations that return Iterators, combine step with the mmerge etc boiler-plate
+ifoldr' :: Monad m => (b -> Iterator a m -> Iterator a m) -> Iterator a m -> Iterator b m -> Iterator a m
+ifoldr' consFunc start =
+  mmerge . ifoldr step (return start)
   where
-    step x = return . cons x . mmerge
+    step x = return . consFunc x . mmerge
+
+append :: Monad m => Iterator a m -> Iterator a m -> Iterator a m
+append a b = ifoldr' cons b a
+
+iconcat :: Monad m => Iterator (Iterator a m) m -> Iterator a m
+iconcat = ifoldr' append empty
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
 itake 0 _ = empty
