@@ -15,15 +15,14 @@ import Data.Iterator (
 -- for convinient importing
 
 -- a strict foldl
-ifoldl :: (Monad m) => (a -> b -> a) -> a -> Iterator b m -> m a
+ifoldl :: (Monad m) => (a -> b -> m a) -> a -> Iterator b m -> m a
 ifoldl func startVal =
   evalIteratesT $ r =<< next
   where
     r Nothing = return startVal
     r (Just v) =
-      lift =<< (processRest . seq s) (ifoldl func s)
-      where
-        s = func startVal v
+      lift (func startVal v) >>=
+      processRest . ifoldl func >>= lift
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: (Monad m) => (a -> m b -> m b) -> m b -> Iterator a m -> m b
@@ -55,7 +54,10 @@ ifilter cond =
 
 -- uses ifoldl because I think with ifoldr it would use much mem, right?
 toList :: (Monad m) => Iterator a m -> m [a]
-toList = liftM reverse . ifoldl (flip (:)) []
+toList =
+  liftM reverse . ifoldl step []
+  where
+    step xs x = return $ x : xs
 
 iTakeWhile :: Monad m => (a -> Bool) -> Iterator a m -> Iterator a m
 iTakeWhile func =
