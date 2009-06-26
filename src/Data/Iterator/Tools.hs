@@ -1,8 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Data.Iterator.Tools (
-  append, execute, fromList,
-  iconcat, ifoldl, ifoldr, ifoldr', imap,
+  append, execute, fromList, iconcat,
+  ifoldl, ifoldr, ifoldr', ilength, imap,
   ifilter, itake, iTakeWhile, toList
   ) where
 
@@ -83,6 +83,9 @@ iconcat = ifoldr' append empty
 
 execute :: Monad m => Iterator a m -> m ()
 execute = ifoldl (const . return) ()
+
+ilength :: (Monad m, Integral i) => Iterator a m -> m i
+ilength = ifoldl (const . return . (+ 1)) 0
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
 itake count =
