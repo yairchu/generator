@@ -8,8 +8,7 @@ module Data.Iterator.Tools (
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
 import Data.Iterator (
-  Iterator, cons, empty, evalIteratesT,
-  mmerge, next, takeRest)
+  Iterator, cons, empty, evalIteratesT, mmerge, next)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convinient importing
@@ -17,23 +16,22 @@ import Data.Iterator (
 -- a strict foldl
 ifoldl :: (Monad m) => (a -> b -> a) -> a -> Iterator b m -> m a
 ifoldl func startVal =
-  evalIteratesT (r =<< next)
+  evalIteratesT $ r0 startVal
   where
-    r Nothing = return startVal
-    r (Just v) = do
-      rest <- takeRest
-      let x = func startVal v
-      seq x . lift $ ifoldl func x rest
+    r0 s = r1 s =<< next
+    r1 s Nothing = return s
+    r1 s (Just v) = do
+      let s' = func s v
+      seq s' $ r0 s'
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: (Monad m) => (a -> m b -> m b) -> m b -> Iterator a m -> m b
 ifoldr consFunc nilFunc =
-  evalIteratesT (r =<< next)
+  evalIteratesT r0
   where
-    r Nothing = lift nilFunc
-    r (Just v) = do
-      rest <- takeRest
-      lift . consFunc v $ ifoldr consFunc nilFunc rest
+    r0 = r1 =<< next
+    r1 Nothing = lift nilFunc
+    r1 (Just v) = lift . consFunc v . return =<< r0
 
 -- for operations that build Iterators, combine step with the mmerge etc boiler-plate
 ifoldr' :: Monad m => (b -> Iterator a m -> Iterator a m) -> Iterator a m -> Iterator b m -> Iterator a m
@@ -74,12 +72,13 @@ iconcat :: Monad m => Iterator (Iterator a m) m -> Iterator a m
 iconcat = ifoldr' append empty
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
-itake 0 _ = empty
-itake count iter =
-  mmerge $ evalIteratesT (r =<< next) iter
+itake count =
+  mmerge . evalIteratesT (r0 count)
   where
-    r Nothing = return empty
-    r (Just v) = do
-      rest <- takeRest
-      return . cons v $ itake (count-1) rest
+    r0 0 = return empty
+    r0 c = r1 c =<< next
+    r1 _ Nothing = return empty
+    r1 c (Just v) = do
+      rest <- r0 (c-1)
+      return $ cons v rest
 

@@ -5,7 +5,7 @@
 module Data.Iterator (
   Iterator, IteratesT,
   empty, evalIteratesT, cons, cons',
-  iterator, mmerge, next, nil, takeRest
+  iterator, mmerge, next, nil 
   ) where
 
 import Control.Monad.State (StateT, evalStateT, get, put)
@@ -68,13 +68,4 @@ next =
     r (Just (val, iter)) = do
       put $ Just iter
       return $ Just val
-
-takeRest :: Monad m => IteratesT v m (Iterator v m)
-takeRest =
-  CIteratesT $ do
-  it <- get
-  put Nothing
-  case it of
-    Nothing -> return . iterator $ return Nothing
-    Just x -> return x
 
