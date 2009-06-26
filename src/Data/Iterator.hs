@@ -29,11 +29,14 @@ nil = return Nothing
 empty :: Monad m => Iterator v m
 empty = iterator nil
 
-cons :: Monad m => v -> Iterator' v m -> Iterator' v m
-cons v = cons' v . iterator
+cons'' :: Monad m => v -> Iterator v m -> Iterator' v m
+cons'' v = return . Just . ((,) v)
 
-cons' :: Monad m => v -> Iterator v m -> Iterator' v m
-cons' v = return . Just . ((,) v)
+cons :: Monad m => a -> Iterator a m -> Iterator a m
+cons v = iterator . cons'' v
+
+cons' :: Monad m => v -> Iterator' v m -> Iterator' v m
+cons' v = cons'' v . iterator
 
 type IteratesT' v m a = StateT (Maybe (Iterator v m)) m a
 newtype IteratesT v m a = CIteratesT {
