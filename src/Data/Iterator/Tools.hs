@@ -101,7 +101,6 @@ itake count =
     r0 0 = return empty
     r0 c = r1 c =<< next
     r1 _ Nothing = return empty
-    r1 c (Just v) = do
-      rest <- r0 (c-1)
-      return $ cons v rest
+    r1 c (Just v) =
+      return . cons v . mmerge =<< processRest (r0 (c-1))
 
