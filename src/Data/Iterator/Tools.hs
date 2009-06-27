@@ -2,7 +2,7 @@
 
 module Data.Iterator.Tools (
   append, execute, fromList, iconcat,
-  ifoldl, ifoldr, ifoldr', ilength, imap,
+  ifoldl, ifoldl', ifoldr, ifoldr', ilength, imap,
   ifilter, itake, iTakeWhile, toList,
   toIteratesT
   ) where
@@ -16,7 +16,6 @@ import Data.Iterator (
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convinient importing
 
--- a strict foldl
 ifoldl :: Monad m => (a -> b -> m a) -> a -> Iterator b m -> m a
 ifoldl func startVal =
   evalIteratesT $ r startVal =<< next
@@ -25,6 +24,15 @@ ifoldl func startVal =
     r s (Just v) = do
       x <- lift (func s v)
       r x =<< next
+
+ifoldl' :: Monad m => (a -> b -> a) -> a -> Iterator b m -> m a
+ifoldl' step =
+  ifoldl step'
+  where
+    step' a b =
+      x `seq` return x
+      where
+        x = step a b
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Iterator a m -> m b
@@ -83,16 +91,10 @@ iconcat :: Monad m => Iterator (Iterator a m) m -> Iterator a m
 iconcat = ifoldr' append empty
 
 execute :: Monad m => Iterator a m -> m ()
-execute = ifoldl (const . return) ()
+execute = ifoldl' const ()
 
 ilength :: (Monad m, Integral i) => Iterator a m -> m i
-ilength =
-  ifoldl step 0
-  where
-    step prev =
-      const $ x `seq` return x
-      where
-        x = prev+1
+ilength = ifoldl' (const . (+ 1))  0
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
 itake count =
