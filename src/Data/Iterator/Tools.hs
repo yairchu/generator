@@ -9,13 +9,13 @@ module Data.Iterator.Tools (
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
 import Data.Iterator (
-  Iterator, cons, empty, evalConsumerT,
+  Producer, cons, empty, evalConsumerT,
   mmerge, next, processRest)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convinient importing
 
-ifoldl :: Monad m => (a -> b -> m a) -> a -> Iterator b m -> m a
+ifoldl :: Monad m => (a -> b -> m a) -> a -> Producer b m -> m a
 ifoldl func startVal =
   evalConsumerT $ r startVal =<< next
   where
@@ -24,7 +24,7 @@ ifoldl func startVal =
       x <- lift (func s v)
       r x =<< next
 
-ifoldl' :: Monad m => (a -> b -> m a) -> a -> Iterator b m -> m a
+ifoldl' :: Monad m => (a -> b -> m a) -> a -> Producer b m -> m a
 ifoldl' step =
   ifoldl step'
   where
@@ -33,7 +33,7 @@ ifoldl' step =
       x `seq` return x
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
-ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Iterator a m -> m b
+ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Producer a m -> m b
 ifoldr consFunc nilFunc =
   evalConsumerT $ r =<< next
   where
@@ -41,14 +41,14 @@ ifoldr consFunc nilFunc =
     r (Just v) =
       lift . consFunc v =<< processRest (r =<< next)
 
--- for operations that build Iterators, combine step with the mmerge etc boiler-plate
-ifoldr' :: Monad m => (b -> Iterator a m -> Iterator a m) -> Iterator a m -> Iterator b m -> Iterator a m
+-- for operations that build Producers, combine step with the mmerge etc boiler-plate
+ifoldr' :: Monad m => (b -> Producer a m -> Producer a m) -> Producer a m -> Producer b m -> Producer a m
 ifoldr' consFunc start =
   mmerge . ifoldr step (return start)
   where
     step x = return . consFunc x . mmerge
 
-imap :: Monad m => (a -> m b) -> Iterator a m -> Iterator b m
+imap :: Monad m => (a -> m b) -> Producer a m -> Producer b m
 imap func =
   ifoldr' step empty
   where
@@ -57,7 +57,7 @@ imap func =
       b <- func a
       return $ cons b bs
 
-ifilter :: Monad m => (a -> m Bool) -> Iterator a m -> Iterator a m
+ifilter :: Monad m => (a -> m Bool) -> Producer a m -> Producer a m
 ifilter cond =
   ifoldr' r empty
   where
@@ -67,34 +67,34 @@ ifilter cond =
       return $ if b then cons x xs else xs
 
 -- uses ifoldl because I think with ifoldr it would use much mem, right?
-toList :: (Monad m) => Iterator a m -> m [a]
+toList :: (Monad m) => Producer a m -> m [a]
 toList =
   liftM reverse . ifoldl step []
   where
     step xs x = return $ x : xs
 
-iTakeWhile :: Monad m => (a -> Bool) -> Iterator a m -> Iterator a m
+iTakeWhile :: Monad m => (a -> Bool) -> Producer a m -> Producer a m
 iTakeWhile func =
   ifoldr' r empty
   where
     r x xs = if func x then cons x xs else empty
 
-fromList :: (Monad m) => [a] -> Iterator a m
+fromList :: (Monad m) => [a] -> Producer a m
 fromList = foldr cons empty
 
-append :: Monad m => Iterator a m -> Iterator a m -> Iterator a m
+append :: Monad m => Producer a m -> Producer a m -> Producer a m
 append a b = ifoldr' cons b a
 
-iconcat :: Monad m => Iterator (Iterator a m) m -> Iterator a m
+iconcat :: Monad m => Producer (Producer a m) m -> Producer a m
 iconcat = ifoldr' append empty
 
-execute :: Monad m => Iterator a m -> m ()
+execute :: Monad m => Producer a m -> m ()
 execute = ifoldl' (const . return) ()
 
-ilength :: (Monad m, Integral i) => Iterator a m -> m i
+ilength :: (Monad m, Integral i) => Producer a m -> m i
 ilength = ifoldl' (const . return . (+ 1))  0
 
-itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
+itake :: (Monad m, Integral i) => i -> Producer a m -> Producer a m
 itake count =
   mmerge . evalConsumerT (r0 count)
   where

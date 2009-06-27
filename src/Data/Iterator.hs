@@ -3,10 +3,10 @@
 -- To be replaced with (or changed to) Control.Generator (Consumer/Producer) package
 -- as decided with Eyal
 -- am still using it for now
--- Iterator will be replaced with ProducerT
+-- Producers will be constructed by ProducerTs
 
 module Data.Iterator (
-  Iterator, ConsumerT,
+  Producer, ConsumerT,
   empty, evalConsumerT, cons, cons',
   iterator, mmerge, next, nil, processRest
   ) where
@@ -15,36 +15,36 @@ import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.Maybe (fromMaybe)
 
-type Iterator' v m = m (Maybe (v, Iterator v m))
-newtype Iterator v m = CIterator (Iterator' v m)
+type Producer' v m = m (Maybe (v, Producer v m))
+newtype Producer v m = CProducer (Producer' v m)
 
-iterator :: Iterator' v m -> Iterator v m
-iterator = CIterator
+iterator :: Producer' v m -> Producer v m
+iterator = CProducer
 
-mmerge :: Monad m => m (Iterator v m) -> Iterator v m
+mmerge :: Monad m => m (Producer v m) -> Producer v m
 mmerge mIter =
   iterator $ do
-  CIterator iter <- mIter
+  CProducer iter <- mIter
   iter
 
-nil :: Monad m => Iterator' v m
+nil :: Monad m => Producer' v m
 nil = return Nothing
 
-empty :: Monad m => Iterator v m
+empty :: Monad m => Producer v m
 empty = iterator nil
 
-cons'' :: Monad m => v -> Iterator v m -> Iterator' v m
+cons'' :: Monad m => v -> Producer v m -> Producer' v m
 cons'' v = return . Just . ((,) v)
 
-cons :: Monad m => a -> Iterator a m -> Iterator a m
+cons :: Monad m => a -> Producer a m -> Producer a m
 cons v = iterator . cons'' v
 
 -- when constructing iterators
 -- sometimes it's easier to do "cons' $ do"
-cons' :: Monad m => v -> Iterator' v m -> Iterator' v m
+cons' :: Monad m => v -> Producer' v m -> Producer' v m
 cons' v = cons'' v . iterator
 
-type ConsumerT' v m a = StateT (Maybe (Iterator v m)) m a
+type ConsumerT' v m a = StateT (Maybe (Producer v m)) m a
 newtype ConsumerT v m a = CConsumerT {
   uConsumerT :: ConsumerT' v m a
   }
@@ -57,7 +57,7 @@ instance Monad m => Monad (ConsumerT v m) where
 instance MonadTrans (ConsumerT v) where
   lift = CConsumerT . lift
 
-evalConsumerT :: Monad m => ConsumerT v m a -> Iterator v m -> m a
+evalConsumerT :: Monad m => ConsumerT v m a -> Producer v m -> m a
 evalConsumerT (CConsumerT i) = evalStateT i . Just
 
 next :: Monad m => ConsumerT v m (Maybe v)
@@ -66,7 +66,7 @@ next =
   x <- get
   case x of
     Nothing -> return Nothing
-    Just (CIterator getNext) -> r =<< lift getNext
+    Just (CProducer getNext) -> r =<< lift getNext
   where
     r Nothing = do
       put Nothing
