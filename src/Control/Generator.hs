@@ -1,7 +1,5 @@
 {-# OPTIONS -O2 -Wall #-}
 
--- Producers will be constructed by ProducerTs
-
 module Control.Generator (
   Producer, ConsumerT,
   empty, evalConsumerT, cons, cons',

@@ -13,5 +13,6 @@ Library
   Extensions:
   Build-Depends:       base, haskell98, mtl
   Exposed-modules:     Control.Generator,
+                       Control.Generator.ProducerT,
                        Control.Generator.Tools
   ghc-options:         -Wall
