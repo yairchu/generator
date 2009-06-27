@@ -24,14 +24,13 @@ ifoldl func startVal =
       x <- lift (func s v)
       r x =<< next
 
-ifoldl' :: Monad m => (a -> b -> a) -> a -> Iterator b m -> m a
+ifoldl' :: Monad m => (a -> b -> m a) -> a -> Iterator b m -> m a
 ifoldl' step =
   ifoldl step'
   where
-    step' a b =
+    step' a b = do
+      x <- step a b
       x `seq` return x
-      where
-        x = step a b
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Iterator a m -> m b
@@ -90,10 +89,10 @@ iconcat :: Monad m => Iterator (Iterator a m) m -> Iterator a m
 iconcat = ifoldr' append empty
 
 execute :: Monad m => Iterator a m -> m ()
-execute = ifoldl' const ()
+execute = ifoldl' (const . return) ()
 
 ilength :: (Monad m, Integral i) => Iterator a m -> m i
-ilength = ifoldl' (const . (+ 1))  0
+ilength = ifoldl' (const . return . (+ 1))  0
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
 itake count =
