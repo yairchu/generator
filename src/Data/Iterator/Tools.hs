@@ -9,7 +9,7 @@ module Data.Iterator.Tools (
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
 import Data.Iterator (
-  Iterator, cons, empty, evalIteratesT,
+  Iterator, cons, empty, evalConsumerT,
   mmerge, next, processRest)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
@@ -17,7 +17,7 @@ import Data.Iterator (
 
 ifoldl :: Monad m => (a -> b -> m a) -> a -> Iterator b m -> m a
 ifoldl func startVal =
-  evalIteratesT $ r startVal =<< next
+  evalConsumerT $ r startVal =<< next
   where
     r s Nothing = return s
     r s (Just v) = do
@@ -35,7 +35,7 @@ ifoldl' step =
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Iterator a m -> m b
 ifoldr consFunc nilFunc =
-  evalIteratesT $ r =<< next
+  evalConsumerT $ r =<< next
   where
     r Nothing = lift nilFunc
     r (Just v) =
@@ -96,7 +96,7 @@ ilength = ifoldl' (const . return . (+ 1))  0
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
 itake count =
-  mmerge . evalIteratesT (r0 count)
+  mmerge . evalConsumerT (r0 count)
   where
     r0 0 = return empty
     r0 c = r1 c =<< next

@@ -4,11 +4,10 @@
 -- as decided with Eyal
 -- am still using it for now
 -- Iterator will be replaced with ProducerT
--- IteratesT will be called ConsumerT
 
 module Data.Iterator (
-  Iterator, IteratesT,
-  empty, evalIteratesT, cons, cons',
+  Iterator, ConsumerT,
+  empty, evalConsumerT, cons, cons',
   iterator, mmerge, next, nil, processRest
   ) where
 
@@ -45,25 +44,25 @@ cons v = iterator . cons'' v
 cons' :: Monad m => v -> Iterator' v m -> Iterator' v m
 cons' v = cons'' v . iterator
 
-type IteratesT' v m a = StateT (Maybe (Iterator v m)) m a
-newtype IteratesT v m a = CIteratesT {
-  uIteratesT :: IteratesT' v m a
+type ConsumerT' v m a = StateT (Maybe (Iterator v m)) m a
+newtype ConsumerT v m a = CConsumerT {
+  uConsumerT :: ConsumerT' v m a
   }
 
-instance Monad m => Monad (IteratesT v m) where
-  return = CIteratesT . return
-  fail = CIteratesT . fail
-  (CIteratesT a) >>= b = CIteratesT $ a >>= uIteratesT . b
+instance Monad m => Monad (ConsumerT v m) where
+  return = CConsumerT . return
+  fail = CConsumerT . fail
+  (CConsumerT a) >>= b = CConsumerT $ a >>= uConsumerT . b
 
-instance MonadTrans (IteratesT v) where
-  lift = CIteratesT . lift
+instance MonadTrans (ConsumerT v) where
+  lift = CConsumerT . lift
 
-evalIteratesT :: Monad m => IteratesT v m a -> Iterator v m -> m a
-evalIteratesT (CIteratesT i) = evalStateT i . Just
+evalConsumerT :: Monad m => ConsumerT v m a -> Iterator v m -> m a
+evalConsumerT (CConsumerT i) = evalStateT i . Just
 
-next :: Monad m => IteratesT v m (Maybe v)
+next :: Monad m => ConsumerT v m (Maybe v)
 next =
-  CIteratesT $ do
+  CConsumerT $ do
   x <- get
   case x of
     Nothing -> return Nothing
@@ -76,11 +75,11 @@ next =
       put $ Just iter
       return $ Just val
 
-processRest :: Monad m => IteratesT a m b -> IteratesT a m (m b)
+processRest :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
 processRest process =
-  CIteratesT $ do
+  CConsumerT $ do
   mRest <- get
   let rest = fromMaybe empty mRest
   put Nothing
-  return $ evalIteratesT process rest
+  return $ evalConsumerT process rest
 
