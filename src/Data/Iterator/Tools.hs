@@ -86,7 +86,13 @@ execute :: Monad m => Iterator a m -> m ()
 execute = ifoldl (const . return) ()
 
 ilength :: (Monad m, Integral i) => Iterator a m -> m i
-ilength = ifoldl (const . return . (+ 1)) 0
+ilength =
+  ifoldl step 0
+  where
+    step prev =
+      const $ x `seq` return x
+      where
+        x = prev+1
 
 itake :: (Monad m, Integral i) => i -> Iterator a m -> Iterator a m
 itake count =
