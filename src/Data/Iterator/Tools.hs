@@ -3,14 +3,13 @@
 module Data.Iterator.Tools (
   append, execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilength, imap,
-  ifilter, itake, iTakeWhile, toList,
-  toIteratesT
+  ifilter, itake, iTakeWhile, toList
   ) where
 
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
 import Data.Iterator (
-  IteratesT, Iterator, cons, empty, evalIteratesT,
+  Iterator, cons, empty, evalIteratesT,
   mmerge, next, processRest)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
@@ -41,7 +40,7 @@ ifoldr consFunc nilFunc =
   where
     r Nothing = lift nilFunc
     r (Just v) =
-      lift . consFunc v =<< processRest (ifoldr consFunc nilFunc)
+      lift . consFunc v =<< processRest (r =<< next)
 
 -- for operations that build Iterators, combine step with the mmerge etc boiler-plate
 ifoldr' :: Monad m => (b -> Iterator a m -> Iterator a m) -> Iterator a m -> Iterator b m -> Iterator a m
@@ -106,8 +105,4 @@ itake count =
     r1 c (Just v) = do
       rest <- r0 (c-1)
       return $ cons v rest
-
--- opposite of evalIteratesT
-toIteratesT :: Monad m => (Iterator v m -> m a) -> IteratesT v m a
-toIteratesT process = lift =<< processRest process
 

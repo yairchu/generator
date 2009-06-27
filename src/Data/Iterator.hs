@@ -1,6 +1,10 @@
 {-# OPTIONS -O2 -Wall #-}
 
--- Should it be Data.Iterator, Control.Iterator, or something else?
+-- To be replaced with (or changed to) Control.Generator (Consumer/Producer) package
+-- as decided with Eyal
+-- am still using it for now
+-- Iterator will be replaced with ProducerT
+-- IteratesT will be called ConsumerT
 
 module Data.Iterator (
   Iterator, IteratesT,
@@ -72,11 +76,11 @@ next =
       put $ Just iter
       return $ Just val
 
-processRest :: Monad m => (Iterator a m -> m b) -> IteratesT a m (m b)
+processRest :: Monad m => IteratesT a m b -> IteratesT a m (m b)
 processRest process =
   CIteratesT $ do
   mRest <- get
   let rest = fromMaybe empty mRest
   put Nothing
-  return $ process rest
+  return $ evalIteratesT process rest
 
