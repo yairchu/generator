@@ -1,11 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
--- To be replaced with (or changed to) Control.Generator (Consumer/Producer) package
--- as decided with Eyal
--- am still using it for now
 -- Producers will be constructed by ProducerTs
 
-module Data.Iterator (
+module Control.Generator (
   Producer, ConsumerT,
   empty, evalConsumerT, cons, cons',
   iterator, mmerge, next, nil, processRest

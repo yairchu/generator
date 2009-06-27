@@ -1,16 +1,16 @@
 {-# OPTIONS -O2 -Wall #-}
 
-module Data.Iterator.Tools (
+module Control.Generator.Tools (
   append, execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilength, imap,
   ifilter, itake, iTakeWhile, toList
   ) where
 
-import Control.Monad (liftM)
-import Control.Monad.Trans (lift)
-import Data.Iterator (
+import Control.Generator (
   Producer, cons, empty, evalConsumerT,
   mmerge, next, processRest)
+import Control.Monad (liftM)
+import Control.Monad.Trans (lift)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convinient importing
