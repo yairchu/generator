@@ -1,12 +1,12 @@
 {-# OPTIONS -O2 -Wall #-}
 
-module Control.Generator.Tools (
+module Control.Generator.Tools(
   append, execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilength, imap,
   ifilter, itake, iTakeWhile, toList
   ) where
 
-import Control.Generator (
+import Control.Generator(
   Producer, cons, empty, evalConsumerT,
   mmerge, next, processRest)
 import Control.Monad (liftM)
@@ -57,6 +57,9 @@ imap func =
       b <- func a
       return $ cons b bs
 
+execute :: Monad m => Producer a m -> m ()
+execute = ifoldl' (const . return) ()
+
 ifilter :: Monad m => (a -> m Bool) -> Producer a m -> Producer a m
 ifilter cond =
   ifoldr' r empty
@@ -66,7 +69,7 @@ ifilter cond =
       b <- cond x
       return $ if b then cons x xs else xs
 
--- uses ifoldl because I think with ifoldr it would use much mem, right?
+-- TODO: uses ifoldl because I think with ifoldr it would use much mem, right?
 toList :: (Monad m) => Producer a m -> m [a]
 toList =
   liftM reverse . ifoldl step []
@@ -88,9 +91,6 @@ append a b = ifoldr' cons b a
 iconcat :: Monad m => Producer (Producer a m) m -> Producer a m
 iconcat = ifoldr' append empty
 
-execute :: Monad m => Producer a m -> m ()
-execute = ifoldl' (const . return) ()
-
 ilength :: (Monad m, Integral i) => Producer a m -> m i
 ilength = ifoldl' (const . return . (+ 1))  0
 
@@ -103,4 +103,3 @@ itake count =
     r1 _ Nothing = return empty
     r1 c (Just v) =
       return . cons v . mmerge =<< processRest (r0 (c-1))
-

@@ -1,6 +1,6 @@
 {-# OPTIONS -O2 -Wall #-}
 
-module Control.Generator (
+module Control.Generator(
   Producer, ConsumerT,
   empty, evalConsumerT, cons,
   mmerge, next, processRest
@@ -19,7 +19,7 @@ empty :: Monad m => Producer v m
 empty = Producer $ return Nothing
 
 cons :: Monad m => a -> Producer a m -> Producer a m
-cons v = Producer . return . Just . ((,) v)
+cons v rest = Producer . return . Just $ (v, rest)
 
 newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (Producer v m)) m a }
 
@@ -60,4 +60,3 @@ processRest process = ConsumerT $ do
                         let rest = fromMaybe empty mRest
                         putNoProducer
                         return $ evalConsumerT process rest
-
