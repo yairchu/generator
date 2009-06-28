@@ -13,7 +13,7 @@ import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
--- for convinient importing
+-- for convenient importing
 
 ifoldl :: Monad m => (a -> b -> m a) -> a -> Producer b m -> m a
 ifoldl func startVal =

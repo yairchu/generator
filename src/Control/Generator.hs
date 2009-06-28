@@ -11,16 +11,13 @@ import Control.Monad.Trans (MonadTrans(..))
 import Data.Maybe (fromMaybe)
 
 type Producer' v m = m (Maybe (v, Producer v m))
-newtype Producer v m = CProducer (Producer' v m)
+newtype Producer v m = CProducer { unCProducer :: Producer' v m }
 
 iterator :: Producer' v m -> Producer v m
 iterator = CProducer
 
 mmerge :: Monad m => m (Producer v m) -> Producer v m
-mmerge mIter =
-  iterator $ do
-  CProducer iter <- mIter
-  iter
+mmerge mIter = iterator $ mIter >>= unCProducer
 
 nil :: Monad m => Producer' v m
 nil = return Nothing
