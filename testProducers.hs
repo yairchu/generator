@@ -2,7 +2,7 @@
 
 import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
-import Control.Generator.Tools (execute, imap, itake, toList)
+import Control.Generator.Tools (execute, imap, itake, toList, izip)
 import Control.Monad (forever)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
@@ -57,22 +57,20 @@ cumSum = do
     modify . (+) =<< lift (MaybeT next)
   return ()
 
-izip :: Monad m => ConsumerT a (ConsumerT b (ProducerT (a, b) m)) ()
-izip = do
-    runMaybeT . forever $ do
-      x <- MaybeT next
-      y <- MaybeT (lift next)
-      lift . lift . lift . yield $ (x, y)
-    return ()
-
 lineSpace :: IO ()
 lineSpace = putStrLn ""
 
+printProducer :: Show a => Producer IO a -> IO ()
+printProducer = execute . imap print
+
+printAfterListing :: Show a => Producer IO a -> IO ()
+printAfterListing p = print =<< toList p
+
 main :: IO ()
 main = do
-  print =<< toList (itake (2::Int) intProducer)
+  printAfterListing $ itake (2::Int) intProducer
   lineSpace
-  execute $ imap print intProducer
+  printProducer intProducer
   lineSpace
   evalConsumerT testConsumer intProducer
   lineSpace
@@ -80,4 +78,4 @@ main = do
   lineSpace
   execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
   lineSpace
-  print =<< toList (produce (evalConsumerT (evalConsumerT izip strProducer) intProducer))
+  printAfterListing $ izip strProducer intProducer
