@@ -10,7 +10,7 @@ import Control.Generator (
   Producer, cons, empty, evalConsumerT,
   mmerge, next, processRest)
 import Control.Generator.ProducerT (produce, yield)
-import Control.Monad (forever, liftM)
+import Control.Monad (forever)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.Trans (MonadTrans(..))
 
@@ -71,12 +71,11 @@ ifilter cond =
       b <- cond x
       return $ if b then cons x xs else xs
 
--- TODO: uses ifoldl because I think with ifoldr it would use much mem, right?
 toList :: (Monad m) => Producer m a -> m [a]
 toList =
-  liftM reverse . ifoldl step []
+  ifoldr step $ return []
   where
-    step xs x = return $ x : xs
+    step x = (return . (x :) =<<)
 
 iTakeWhile :: Monad m => (a -> Bool) -> Producer m a -> Producer m a
 iTakeWhile func =
