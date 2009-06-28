@@ -15,7 +15,7 @@ import Control.Monad.Trans (lift)
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convenient importing
 
-ifoldl :: Monad m => (a -> b -> m a) -> a -> Producer b m -> m a
+ifoldl :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
 ifoldl func startVal =
   evalConsumerT $ r startVal =<< next
   where
@@ -24,7 +24,7 @@ ifoldl func startVal =
       x <- lift (func s v)
       r x =<< next
 
-ifoldl' :: Monad m => (a -> b -> m a) -> a -> Producer b m -> m a
+ifoldl' :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
 ifoldl' step =
   ifoldl step'
   where
@@ -33,7 +33,7 @@ ifoldl' step =
       x `seq` return x
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
-ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Producer a m -> m b
+ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Producer m a -> m b
 ifoldr consFunc nilFunc =
   evalConsumerT $ r =<< next
   where
@@ -42,13 +42,13 @@ ifoldr consFunc nilFunc =
       lift . consFunc v =<< processRest (r =<< next)
 
 -- for operations that build Producers, combine step with the mmerge etc boiler-plate
-ifoldr' :: Monad m => (b -> Producer a m -> Producer a m) -> Producer a m -> Producer b m -> Producer a m
+ifoldr' :: Monad m => (b -> Producer m a -> Producer m a) -> Producer m a -> Producer m b -> Producer m a
 ifoldr' consFunc start =
   mmerge . ifoldr step (return start)
   where
     step x = return . consFunc x . mmerge
 
-imap :: Monad m => (a -> m b) -> Producer a m -> Producer b m
+imap :: Monad m => (a -> m b) -> Producer m a -> Producer m b
 imap func =
   ifoldr' step empty
   where
@@ -57,10 +57,10 @@ imap func =
       b <- func a
       return $ cons b bs
 
-execute :: Monad m => Producer a m -> m ()
+execute :: Monad m => Producer m a -> m ()
 execute = ifoldl' (const . return) ()
 
-ifilter :: Monad m => (a -> m Bool) -> Producer a m -> Producer a m
+ifilter :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
 ifilter cond =
   ifoldr' r empty
   where
@@ -70,31 +70,31 @@ ifilter cond =
       return $ if b then cons x xs else xs
 
 -- TODO: uses ifoldl because I think with ifoldr it would use much mem, right?
-toList :: (Monad m) => Producer a m -> m [a]
+toList :: (Monad m) => Producer m a -> m [a]
 toList =
   liftM reverse . ifoldl step []
   where
     step xs x = return $ x : xs
 
-iTakeWhile :: Monad m => (a -> Bool) -> Producer a m -> Producer a m
+iTakeWhile :: Monad m => (a -> Bool) -> Producer m a -> Producer m a
 iTakeWhile func =
   ifoldr' r empty
   where
     r x xs = if func x then cons x xs else empty
 
-fromList :: (Monad m) => [a] -> Producer a m
+fromList :: (Monad m) => [a] -> Producer m a
 fromList = foldr cons empty
 
-append :: Monad m => Producer a m -> Producer a m -> Producer a m
+append :: Monad m => Producer m a -> Producer m a -> Producer m a
 append a b = ifoldr' cons b a
 
-iconcat :: Monad m => Producer (Producer a m) m -> Producer a m
+iconcat :: Monad m => Producer m (Producer m a) -> Producer m a
 iconcat = ifoldr' append empty
 
-ilength :: (Monad m, Integral i) => Producer a m -> m i
+ilength :: (Monad m, Integral i) => Producer m a -> m i
 ilength = ifoldl' (const . return . (+ 1))  0
 
-itake :: (Monad m, Integral i) => i -> Producer a m -> Producer a m
+itake :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
 itake count =
   mmerge . evalConsumerT (r0 count)
   where

@@ -12,18 +12,18 @@ import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.Maybe (fromMaybe, isNothing)
 
-newtype Producer v m = Producer { unProducer :: m (Maybe (v, Producer v m)) }
+newtype Producer m v = Producer { unProducer :: m (Maybe (v, Producer m v)) }
 
-mmerge :: Monad m => m (Producer v m) -> Producer v m
+mmerge :: Monad m => m (Producer m v) -> Producer m v
 mmerge mIter = Producer $ mIter >>= unProducer
 
-empty :: Monad m => Producer v m
+empty :: Monad m => Producer m v
 empty = Producer $ return Nothing
 
-cons :: Monad m => a -> Producer a m -> Producer a m
+cons :: Monad m => a -> Producer m a -> Producer m a
 cons v rest = Producer . return . Just $ (v, rest)
 
-newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (Producer v m)) m a }
+newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (Producer m v)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
   return = ConsumerT . return
@@ -36,11 +36,11 @@ instance MonadTrans (ConsumerT v) where
 instance MonadIO m => MonadIO (ConsumerT v m) where
   liftIO = lift . liftIO
 
-evalConsumerT :: Monad m => ConsumerT v m a -> Producer v m -> m a
+evalConsumerT :: Monad m => ConsumerT v m a -> Producer m v -> m a
 evalConsumerT (ConsumerT i) = evalStateT i . Just
 
 -- Consumer no longer has a producer left...
-putNoProducer :: Monad m => StateT (Maybe (Producer v m)) m ()
+putNoProducer :: Monad m => StateT (Maybe (Producer m v)) m ()
 putNoProducer = put Nothing
 
 next :: Monad m => ConsumerT v m (Maybe v)
