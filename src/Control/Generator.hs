@@ -2,76 +2,62 @@
 
 module Control.Generator (
   Producer, ConsumerT,
-  empty, evalConsumerT, cons, cons',
-  iterator, mmerge, next, nil, processRest
+  empty, evalConsumerT, cons,
+  mmerge, next, processRest
   ) where
 
-import Control.Monad.State (StateT, evalStateT, get, put)
-import Control.Monad.Trans (MonadTrans(..))
-import Data.Maybe (fromMaybe)
+import Control.Monad.State(StateT, evalStateT, get, put)
+import Control.Monad.Trans(MonadTrans(..))
+import Data.Maybe(fromMaybe)
 
-type Producer' v m = m (Maybe (v, Producer v m))
-newtype Producer v m = CProducer { unCProducer :: Producer' v m }
-
-iterator :: Producer' v m -> Producer v m
-iterator = CProducer
+newtype Producer v m = Producer { unProducer :: m (Maybe (v, Producer v m)) }
 
 mmerge :: Monad m => m (Producer v m) -> Producer v m
-mmerge mIter = iterator $ mIter >>= unCProducer
-
-nil :: Monad m => Producer' v m
-nil = return Nothing
+mmerge mIter = Producer $ mIter >>= unProducer
 
 empty :: Monad m => Producer v m
-empty = iterator nil
-
-cons'' :: Monad m => v -> Producer v m -> Producer' v m
-cons'' v = return . Just . ((,) v)
+empty = Producer $ return Nothing
 
 cons :: Monad m => a -> Producer a m -> Producer a m
-cons v = iterator . cons'' v
+cons v = Producer . return . Just . ((,) v)
 
--- when constructing iterators
--- sometimes it's easier to do "cons' $ do"
-cons' :: Monad m => v -> Producer' v m -> Producer' v m
-cons' v = cons'' v . iterator
-
-type ConsumerT' v m a = StateT (Maybe (Producer v m)) m a
-newtype ConsumerT v m a = CConsumerT {
-  uConsumerT :: ConsumerT' v m a
-  }
+newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (Producer v m)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
-  return = CConsumerT . return
-  fail = CConsumerT . fail
-  (CConsumerT a) >>= b = CConsumerT $ a >>= uConsumerT . b
+  return = ConsumerT . return
+  fail = ConsumerT . fail
+  (ConsumerT a) >>= b = ConsumerT $ a >>= unConsumerT . b
 
 instance MonadTrans (ConsumerT v) where
-  lift = CConsumerT . lift
+  lift = ConsumerT . lift
 
 evalConsumerT :: Monad m => ConsumerT v m a -> Producer v m -> m a
-evalConsumerT (CConsumerT i) = evalStateT i . Just
+evalConsumerT (ConsumerT i) = evalStateT i . Just
+
+-- Consumer moves on to this producer:
+putProducer :: Monad m => Producer v m -> StateT (Maybe (Producer v m)) m ()
+putProducer = put . Just
+-- Consumer no longer has a producer left...
+putNoProducer :: Monad m => StateT (Maybe (Producer v m)) m ()
+putNoProducer = put Nothing
 
 next :: Monad m => ConsumerT v m (Maybe v)
-next =
-  CConsumerT $ do
-  x <- get
-  case x of
-    Nothing -> return Nothing
-    Just (CProducer getNext) -> r =<< lift getNext
+next = ConsumerT $ get >>= maybe -- no producer:
+                                 (return Nothing)
+                                 -- execute producer's action inside our inner monad:
+                                 ((handleProducerResult =<<) . lift . unProducer)
   where
-    r Nothing = do
-      put Nothing
-      return Nothing
-    r (Just (val, iter)) = do
-      put $ Just iter
-      return $ Just val
+    handleProducerResult =
+        maybe -- producer generated Nothing
+              (putNoProducer >> return Nothing)
+              -- producer generated a new item and continuation:
+              producerItem
+    producerItem (val, nextProducer) = putProducer nextProducer >> return (Just val)
 
 processRest :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
-processRest process =
-  CConsumerT $ do
-  mRest <- get
-  let rest = fromMaybe empty mRest
-  put Nothing
-  return $ evalConsumerT process rest
+processRest process = ConsumerT $ do
+                        mRest <- get
+                        let rest = fromMaybe empty mRest
+                        putNoProducer
+                        return $ evalConsumerT process rest
 
