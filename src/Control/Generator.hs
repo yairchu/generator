@@ -58,9 +58,10 @@ next =
   return val
 
 processRest :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
-processRest process = ConsumerT $ do
-                        mRest <- get
-                        let rest = fromMaybe empty mRest
-                        putNoProducer
-                        return $ evalConsumerT process rest
+processRest process =
+  ConsumerT $ do
+  mRest <- get
+  let rest = fromMaybe empty mRest
+  putNoProducer
+  return $ evalConsumerT process rest
 
