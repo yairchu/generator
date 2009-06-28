@@ -108,7 +108,7 @@ itake count =
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
-  Producer a m -> Producer a (t m)
+  Producer m a -> Producer (t m) a
 liftProdMonad =
   mmerge . lift . evalConsumerT (r =<< next)
   where
@@ -116,7 +116,7 @@ liftProdMonad =
     r (Just v) =
       return . cons v . mmerge . lift =<< processRest (r =<< next)
 
-izip :: Monad m => Producer a m -> Producer b m -> Producer (a, b) m
+izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
 izip prodA prodB =
   produce .
   flip evalConsumerT (liftProdMonad prodA) .
