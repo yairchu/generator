@@ -3,7 +3,7 @@
 import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Generator.Tools (execute, imap, itake, toList, izip)
-import Control.Monad (forever)
+import Control.Monad (forever, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
@@ -30,7 +30,7 @@ strProducer =
 
 testConsumer :: ConsumerT Int IO ()
 testConsumer = do
-  lift . putStrLn $ "testConsumer starting" 
+  lift . putStrLn $ "testConsumer starting"
   Just a <- next
   Just b <- next
   lift . putStrLn $ "read two values whose sum is " ++ show (a+b)
@@ -40,7 +40,7 @@ testConsumer = do
 -- sake, we keep fewer levels of indirection
 testConsumer2 :: ConsumerT String (ConsumerT Int IO) ()
 testConsumer2 = do
-  liftIO . putStrLn $ "testConsumer2 starting" 
+  liftIO . putStrLn $ "testConsumer2 starting"
   Just s1 <- next
   Just i1 <- lift next
   liftIO . putStrLn $ "We can interlace actions between consumptions, of course :-)"
@@ -68,14 +68,10 @@ printAfterListing p = print =<< toList p
 
 main :: IO ()
 main = do
-  printAfterListing $ itake (2::Int) intProducer
-  lineSpace
-  printProducer intProducer
-  lineSpace
-  evalConsumerT testConsumer intProducer
-  lineSpace
-  evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
-  lineSpace
-  execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
-  lineSpace
-  printAfterListing $ izip strProducer intProducer
+    mapM_ (>> lineSpace)
+       [printAfterListing $ itake (2::Int) intProducer
+       ,printProducer intProducer
+       ,evalConsumerT testConsumer intProducer
+       ,evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
+       ,execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
+       ,printAfterListing $ izip strProducer intProducer]
