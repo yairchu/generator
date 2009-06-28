@@ -4,6 +4,8 @@ import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Generator.Tools (execute, imap, itake, toList)
 import Control.Monad.Trans (MonadIO(..), lift)
+import Control.Monad.Maybe (MaybeT(..))
+import Control.Monad (forever)
 
 intProducer :: MonadIO m => Producer Int m
 intProducer =
@@ -56,15 +58,27 @@ cumSum =
       v <- next
       maybe (return ()) (r . (s +)) v
 
+izip :: Monad m => ConsumerT a (ConsumerT b (ProducerT (a, b) m)) ()
+izip = do
+    runMaybeT . forever $ do
+      x <- MaybeT next
+      y <- MaybeT (lift next)
+      lift . lift . lift . yield $ (x, y)
+    return ()
+
+lineSpace :: IO ()
+lineSpace = putStrLn ""
+
 main :: IO ()
 main = do
   print =<< toList (itake (2::Int) intProducer)
-  putStrLn ""
+  lineSpace
   execute $ imap print intProducer
-  putStrLn ""
+  lineSpace
   evalConsumerT testConsumer intProducer
-  putStrLn ""
+  lineSpace
   evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
-  putStrLn ""
-  execute . imap print . itake 3 . produce $ evalConsumerT cumSum intProducer
-
+  lineSpace
+  execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
+  lineSpace
+  print =<< toList (produce (evalConsumerT (evalConsumerT izip strProducer) intProducer))

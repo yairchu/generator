@@ -31,4 +31,3 @@ yield v =
 
 produce :: Monad m => ProducerT v m () -> Producer v m
 produce (ProducerT (Cont prod)) = prod $ const empty
-
