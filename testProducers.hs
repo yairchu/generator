@@ -1,9 +1,9 @@
 {-# OPTIONS -O2 -Wall #-}
 
-import Control.Generator(ConsumerT, evalConsumerT, Producer, next)
-import Control.Generator.ProducerT(produce, yield)
-import Control.Generator.Tools(execute, imap, itake, toList)
-import Control.Monad.Trans(MonadIO(..), lift)
+import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
+import Control.Generator.ProducerT (ProducerT, produce, yield)
+import Control.Generator.Tools (execute, imap, itake, toList)
+import Control.Monad.Trans (MonadIO(..), lift)
 
 intProducer :: MonadIO m => Producer Int m
 intProducer =
@@ -46,12 +46,25 @@ testConsumer2 = do
   Nothing <- next
   liftIO . putStrLn $ "read two int values whose sum is " ++ show (i1+i2)
   liftIO . putStrLn $ "read two str values whose concat is " ++ s1 ++ s2
-  
+
+cumSum :: Monad m => ConsumerT Int (ProducerT Int m) ()
+cumSum =
+  r 0
+  where
+    r s = do
+      lift $ yield s
+      v <- next
+      maybe (return ()) (r . (s +)) v
 
 main :: IO ()
 main = do
- print =<< toList (itake (2::Int) intProducer)
- putStrLn ""
- execute $ imap print intProducer
- evalConsumerT testConsumer intProducer
- evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
+  print =<< toList (itake (2::Int) intProducer)
+  putStrLn ""
+  execute $ imap print intProducer
+  putStrLn ""
+  evalConsumerT testConsumer intProducer
+  putStrLn ""
+  evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
+  putStrLn ""
+  execute . imap print . itake 3 . produce $ evalConsumerT cumSum intProducer
+
