@@ -125,6 +125,5 @@ izip prodA prodB =
     a <- MaybeT $ lift next
     b <- MaybeT next
     lift . lift . lift $ yield (a, b)
-    return ()
   return ()
 
