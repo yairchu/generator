@@ -8,7 +8,7 @@ import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
 
-intProducer :: MonadIO m => Producer Int m
+intProducer :: MonadIO m => Producer m Int
 intProducer =
     produce $ do
       liftIO $ putStrLn "yielding 1"
@@ -19,7 +19,7 @@ intProducer =
       yield 100
       liftIO $ putStrLn "int producer is done!"
 
-strProducer :: MonadIO m => Producer String m
+strProducer :: MonadIO m => Producer m String
 strProducer =
     produce $ do
       liftIO $ putStrLn "yielding string1"

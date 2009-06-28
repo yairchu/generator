@@ -9,7 +9,7 @@ import Control.Monad.Cont (Cont (..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 
 newtype ProducerT v m a =
-  ProducerT { unProducerT :: Cont (Producer v m) a }
+  ProducerT { unProducerT :: Cont (Producer m v) a }
 
 instance Monad m => Monad (ProducerT v m) where
   return = ProducerT . return
@@ -29,5 +29,5 @@ yield v =
   ProducerT . Cont $
     \f -> cons v $ f ()
 
-produce :: Monad m => ProducerT v m () -> Producer v m
+produce :: Monad m => ProducerT v m () -> Producer m v
 produce (ProducerT (Cont prod)) = prod $ const empty
