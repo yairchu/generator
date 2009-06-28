@@ -39,9 +39,6 @@ instance MonadIO m => MonadIO (ConsumerT v m) where
 evalConsumerT :: Monad m => ConsumerT v m a -> Producer v m -> m a
 evalConsumerT (ConsumerT i) = evalStateT i . Just
 
--- Consumer moves on to this producer:
-putProducer :: Monad m => Producer v m -> StateT (Maybe (Producer v m)) m ()
-putProducer = put . Just
 -- Consumer no longer has a producer left...
 putNoProducer :: Monad m => StateT (Maybe (Producer v m)) m ()
 putNoProducer = put Nothing
@@ -56,6 +53,8 @@ next =
     return r
   lift $ putProducer nextProducer
   return val
+  where
+    putProducer = put . Just
 
 processRest :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
 processRest process =
