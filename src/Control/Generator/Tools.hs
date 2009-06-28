@@ -3,14 +3,16 @@
 module Control.Generator.Tools(
   append, execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilength, imap,
-  ifilter, itake, iTakeWhile, toList
+  ifilter, itake, iTakeWhile, izip, liftProdMonad, toList
   ) where
 
 import Control.Generator (
   Producer, cons, empty, evalConsumerT,
   mmerge, next, processRest)
-import Control.Monad (liftM)
-import Control.Monad.Trans (lift)
+import Control.Generator.ProducerT (produce, yield)
+import Control.Monad (forever, liftM)
+import Control.Monad.Maybe (MaybeT(..))
+import Control.Monad.Trans (MonadTrans(..))
 
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convenient importing
@@ -103,3 +105,26 @@ itake count =
     r1 _ Nothing = return empty
     r1 c (Just v) =
       return . cons v . mmerge =<< processRest (r0 (c-1))
+
+liftProdMonad ::
+  (Monad (t m), Monad m, MonadTrans t) =>
+  Producer a m -> Producer a (t m)
+liftProdMonad =
+  mmerge . lift . evalConsumerT (r =<< next)
+  where
+    r Nothing = return empty
+    r (Just v) =
+      return . cons v . mmerge . lift =<< processRest (r =<< next)
+
+izip :: Monad m => Producer a m -> Producer b m -> Producer (a, b) m
+izip prodA prodB =
+  produce .
+  flip evalConsumerT (liftProdMonad prodA) .
+  flip evalConsumerT (liftProdMonad (liftProdMonad prodB)) $ do
+  runMaybeT . forever $ do
+    a <- MaybeT $ lift next
+    b <- MaybeT next
+    lift . lift . lift $ yield (a, b)
+    return ()
+  return ()
+
