@@ -3,6 +3,9 @@
 import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Generator.Tools (execute, imap, itake, toList)
+import Control.Monad (forever)
+import Control.Monad.Maybe (MaybeT(..))
+import Control.Monad.State (StateT(..), evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
 
 intProducer :: MonadIO m => Producer Int m
@@ -48,13 +51,11 @@ testConsumer2 = do
   liftIO . putStrLn $ "read two str values whose concat is " ++ s1 ++ s2
 
 cumSum :: Monad m => ConsumerT Int (ProducerT Int m) ()
-cumSum =
-  r 0
-  where
-    r s = do
-      lift $ yield s
-      v <- next
-      maybe (return ()) (r . (s +)) v
+cumSum = do
+  runMaybeT . flip evalStateT 0 . forever $ do
+    lift . lift . lift . yield =<< get
+    modify . (+) =<< lift (MaybeT next)
+  return ()
 
 main :: IO ()
 main = do
