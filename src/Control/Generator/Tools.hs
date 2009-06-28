@@ -6,7 +6,7 @@ module Control.Generator.Tools(
   ifilter, itake, iTakeWhile, toList
   ) where
 
-import Control.Generator(
+import Control.Generator (
   Producer, cons, empty, evalConsumerT,
   mmerge, next, processRest)
 import Control.Monad (liftM)

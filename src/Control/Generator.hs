@@ -6,9 +6,11 @@ module Control.Generator(
   mmerge, next, processRest
   ) where
 
-import Control.Monad.State(StateT, evalStateT, get, put)
-import Control.Monad.Trans(MonadTrans(..), MonadIO(..))
-import Data.Maybe(fromMaybe)
+import Control.Monad (when)
+import Control.Monad.Maybe (MaybeT (..))
+import Control.Monad.State (StateT, evalStateT, get, put)
+import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
+import Data.Maybe (fromMaybe, isNothing)
 
 newtype Producer v m = Producer { unProducer :: m (Maybe (v, Producer v m)) }
 
@@ -24,15 +26,15 @@ cons v rest = Producer . return . Just $ (v, rest)
 newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (Producer v m)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
-    return = ConsumerT . return
-    fail = ConsumerT . fail
-    (ConsumerT a) >>= b = ConsumerT $ a >>= unConsumerT . b
+  return = ConsumerT . return
+  fail = ConsumerT . fail
+  (ConsumerT a) >>= b = ConsumerT $ a >>= unConsumerT . b
 
 instance MonadTrans (ConsumerT v) where
-    lift = ConsumerT . lift
+  lift = ConsumerT . lift
 
 instance MonadIO m => MonadIO (ConsumerT v m) where
-    liftIO = lift . liftIO
+  liftIO = lift . liftIO
 
 evalConsumerT :: Monad m => ConsumerT v m a -> Producer v m -> m a
 evalConsumerT (ConsumerT i) = evalStateT i . Just
@@ -45,17 +47,15 @@ putNoProducer :: Monad m => StateT (Maybe (Producer v m)) m ()
 putNoProducer = put Nothing
 
 next :: Monad m => ConsumerT v m (Maybe v)
-next = ConsumerT $ get >>= maybe -- no producer:
-                                 (return Nothing)
-                                 -- execute producer's action inside our inner monad:
-                                 ((handleProducerResult =<<) . lift . unProducer)
-  where
-    handleProducerResult =
-        maybe -- producer generated Nothing
-              (putNoProducer >> return Nothing)
-              -- producer generated a new item and continuation:
-              producerItem
-    producerItem (val, nextProducer) = putProducer nextProducer >> return (Just val)
+next =
+  ConsumerT . runMaybeT $ do
+  Producer prod <- MaybeT get
+  (val, nextProducer) <- MaybeT $ do
+    r <- lift prod
+    when (isNothing r) putNoProducer
+    return r
+  lift $ putProducer nextProducer
+  return val
 
 processRest :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
 processRest process = ConsumerT $ do
@@ -63,3 +63,4 @@ processRest process = ConsumerT $ do
                         let rest = fromMaybe empty mRest
                         putNoProducer
                         return $ evalConsumerT process rest
+
