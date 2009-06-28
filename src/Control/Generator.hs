@@ -7,7 +7,7 @@ module Control.Generator(
   ) where
 
 import Control.Monad.State(StateT, evalStateT, get, put)
-import Control.Monad.Trans(MonadTrans(..))
+import Control.Monad.Trans(MonadTrans(..), MonadIO(..))
 import Data.Maybe(fromMaybe)
 
 newtype Producer v m = Producer { unProducer :: m (Maybe (v, Producer v m)) }
@@ -24,12 +24,15 @@ cons v rest = Producer . return . Just $ (v, rest)
 newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (Producer v m)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
-  return = ConsumerT . return
-  fail = ConsumerT . fail
-  (ConsumerT a) >>= b = ConsumerT $ a >>= unConsumerT . b
+    return = ConsumerT . return
+    fail = ConsumerT . fail
+    (ConsumerT a) >>= b = ConsumerT $ a >>= unConsumerT . b
 
 instance MonadTrans (ConsumerT v) where
-  lift = ConsumerT . lift
+    lift = ConsumerT . lift
+
+instance MonadIO m => MonadIO (ConsumerT v m) where
+    liftIO = lift . liftIO
 
 evalConsumerT :: Monad m => ConsumerT v m a -> Producer v m -> m a
 evalConsumerT (ConsumerT i) = evalStateT i . Just
