@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
-import Control.Generator.ProducerT (ProducerT, produce, yield, yieldM)
+import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Generator.Tools (execute, imap, itake, toList, izip)
 import Control.Monad (forever, guard, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
@@ -70,9 +70,9 @@ printAfterListing p = print =<< toList p
 listProducer :: Producer [] Int
 listProducer =
   produce $ do
-  yieldM [5, 8]
-  yieldM [6, 9]
-  yieldM [4, 7]
+  yield =<< lift [5, 8]
+  yield =<< lift [6, 9]
+  yield =<< lift [4, 7]
 
 filterSorted :: (Monad m, Ord a) => Producer m a -> m [a]
 filterSorted = 
