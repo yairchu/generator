@@ -13,7 +13,7 @@ newtype ProducerT v m a =
 
 instance Monad m => Monad (ProducerT v m) where
   return = ProducerT . return
-  (ProducerT a) >>= f = ProducerT $ a >>= unProducerT . f
+  ProducerT a >>= f = ProducerT $ a >>= unProducerT . f
   fail = ProducerT . fail
 
 instance MonadTrans (ProducerT v) where
