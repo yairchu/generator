@@ -3,14 +3,15 @@
 module Control.Generator.Tools(
   append, execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilength, imap,
-  ifilter, itake, iTakeWhile, izip, liftProdMonad, toList
+  ifilter, itake, iTakeWhile, izip, izipWith, izipP2,
+  liftProdMonad, toList
   ) where
 
 import Control.Generator (
-  Producer, cons, empty, evalConsumerT,
+  Producer, cons, empty, ConsumerT, evalConsumerT,
   mmerge, next, processRest)
-import Control.Generator.ProducerT (produce, yield)
-import Control.Monad (forever)
+import Control.Generator.ProducerT (ProducerT, produce, yield)
+import Control.Monad (forever, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.Trans (MonadTrans(..))
 
@@ -115,13 +116,21 @@ liftProdMonad =
     r (Just v) =
       return . cons v . mmerge . lift =<< processRest (r =<< next)
 
-izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
-izip prodA prodB =
-    produce .
-    (`evalConsumerT` liftProdMonad prodA) .
-    (`evalConsumerT` (liftProdMonad . liftProdMonad) prodB) $ do
-        runMaybeT . forever $ do
-            a <- MaybeT $ lift next
-            b <- MaybeT next
-            lift . lift . lift $ yield (a, b)
+izipP2 :: (Monad m) =>
+          Producer m v1
+       -> Producer m a
+       -> ConsumerT a (ConsumerT v1 (ProducerT v m)) ()
+       -> Producer m v
+izipP2 p1 p2 = produce .
+               (`evalConsumerT` liftProdMonad p1) .
+               (`evalConsumerT` (liftProdMonad . liftProdMonad) p2)
+
+izipWith :: Monad m => (a -> b -> c) -> Producer m a -> Producer m b -> Producer m c
+izipWith f p1 p2 =
+    izipP2 p1 p2 $ do
+        runMaybeT . forever $ liftM2 f (MaybeT $ lift next) (MaybeT next)
+                              >>= lift . lift . lift . yield
         return ()
+
+izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
+izip = izipWith (,)
