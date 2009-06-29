@@ -117,12 +117,11 @@ liftProdMonad =
 
 izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
 izip prodA prodB =
-  produce .
-  flip evalConsumerT (liftProdMonad prodA) .
-  flip evalConsumerT (liftProdMonad (liftProdMonad prodB)) $ do
-  runMaybeT . forever $ do
-    a <- MaybeT $ lift next
-    b <- MaybeT next
-    lift . lift . lift $ yield (a, b)
-  return ()
-
+    produce .
+    (`evalConsumerT` liftProdMonad prodA) .
+    (`evalConsumerT` (liftProdMonad . liftProdMonad) prodB) $ do
+        runMaybeT . forever $ do
+            a <- MaybeT $ lift next
+            b <- MaybeT next
+            lift . lift . lift $ yield (a, b)
+        return ()
