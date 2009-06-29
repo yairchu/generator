@@ -5,6 +5,7 @@ module Control.Generator.ProducerT(
   ) where
 
 import Control.Generator (Producer, cons, empty, mmerge)
+import Control.Monad (liftM)
 import Control.Monad.Cont (Cont (..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 
@@ -17,17 +18,13 @@ instance Monad m => Monad (ProducerT v m) where
   fail = ProducerT . fail
 
 instance MonadTrans (ProducerT v) where
-  lift m =
-    ProducerT . Cont $
-      \f -> mmerge $ return . f =<< m
+  lift m = ProducerT . Cont $ \k -> mmerge . liftM k $ m
 
 instance MonadIO m => MonadIO (ProducerT v m) where
   liftIO = lift . liftIO
 
 yield :: Monad m => v -> ProducerT v m ()
-yield v =
-  ProducerT . Cont $
-    \f -> cons v $ f ()
+yield v = ProducerT . Cont $ cons v . ($())
 
 produce :: Monad m => ProducerT v m () -> Producer m v
-produce (ProducerT (Cont prod)) = prod $ const empty
+produce = ($const empty) . runCont . unProducerT
