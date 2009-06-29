@@ -7,6 +7,7 @@ import Control.Monad (forever, guard, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
+import Data.Maybe (catMaybes)
 
 intProducer :: MonadIO m => Producer m Int
 intProducer =
@@ -73,16 +74,16 @@ listProducer =
   yieldM [6, 9]
   yieldM [4, 7]
 
-findDescending :: Producer [] Int -> [[Int]]
-findDescending =
+filterSorted :: (Monad m, Ord a) => Producer m a -> m [a]
+filterSorted = 
   evalConsumerT $ do
-    Just x <- next
-    r [x] =<< next
+  a <- next
+  r [a] =<< next
   where
-    r prefix Nothing = return $ reverse prefix
-    r xs (Just y) = do
-      lift . guard $ y < head xs
-      r (y : xs) =<< next
+    r xs Nothing = return . reverse $ catMaybes xs
+    r xs y
+      | y < head xs = fail ""
+      | otherwise = r (y:xs) =<< next
 
 main :: IO ()
 main = do
@@ -93,5 +94,5 @@ main = do
        ,evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
        ,execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
        ,printAfterListing $ izip strProducer intProducer]
-  print $ findDescending listProducer
+  print $ filterSorted listProducer
 
