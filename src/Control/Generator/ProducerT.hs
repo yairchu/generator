@@ -24,7 +24,7 @@ instance MonadIO m => MonadIO (ProducerT v m) where
   liftIO = lift . liftIO
 
 yield :: Monad m => v -> ProducerT v m ()
-yield v = ProducerT . Cont $ cons v . ($())
+yield v = ProducerT . Cont $ cons v . ($ ())
 
 produce :: Monad m => ProducerT v m () -> Producer m v
-produce = ($const empty) . runCont . unProducerT
+produce = ($ const empty) . runCont . unProducerT

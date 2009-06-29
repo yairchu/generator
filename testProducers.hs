@@ -67,8 +67,7 @@ printAfterListing :: Show a => Producer IO a -> IO ()
 printAfterListing p = print =<< toList p
 
 main :: IO ()
-main = do
-    mapM_ (>> lineSpace)
+main = mapM_ (>> lineSpace)
        [printAfterListing $ itake (2::Int) intProducer
        ,printProducer intProducer
        ,evalConsumerT testConsumer intProducer
