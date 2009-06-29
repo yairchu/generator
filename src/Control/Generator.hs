@@ -20,8 +20,11 @@ mmerge mIter = Producer $ mIter >>= unProducer
 empty :: Monad m => Producer m v
 empty = Producer $ return Nothing
 
-cons :: Monad m => a -> Producer m a -> Producer m a
-cons v rest = Producer . return . Just $ (v, rest)
+cons :: Monad m => m a -> Producer m a -> Producer m a
+cons m rest =
+  Producer $ do
+  a <- m
+  return $ Just (a, rest)
 
 newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (Producer m v)) m a }
 

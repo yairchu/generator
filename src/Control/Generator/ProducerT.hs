@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Control.Generator.ProducerT(
-  ProducerT, produce, yield
+  ProducerT, produce, yield, yieldM
   ) where
 
 import Control.Generator (Producer, cons, empty, mmerge)
@@ -23,8 +23,11 @@ instance MonadTrans (ProducerT v) where
 instance MonadIO m => MonadIO (ProducerT v m) where
   liftIO = lift . liftIO
 
+yieldM :: Monad m => m v -> ProducerT v m ()
+yieldM v = ProducerT . Cont $ cons v . ($ ())
+
 yield :: Monad m => v -> ProducerT v m ()
-yield v = ProducerT . Cont $ cons v . ($ ())
+yield = yieldM . return
 
 produce :: Monad m => ProducerT v m () -> Producer m v
 produce = ($ const empty) . runCont . unProducerT

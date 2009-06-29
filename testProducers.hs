@@ -1,9 +1,9 @@
 {-# OPTIONS -O2 -Wall #-}
 
 import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
-import Control.Generator.ProducerT (ProducerT, produce, yield)
+import Control.Generator.ProducerT (ProducerT, produce, yield, yieldM)
 import Control.Generator.Tools (execute, imap, itake, toList, izip)
-import Control.Monad (forever, mapM_)
+import Control.Monad (forever, guard, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
@@ -66,11 +66,32 @@ printProducer = execute . imap print
 printAfterListing :: Show a => Producer IO a -> IO ()
 printAfterListing p = print =<< toList p
 
+listProducer :: Producer [] Int
+listProducer =
+  produce $ do
+  yieldM [5, 8]
+  yieldM [6, 9]
+  yieldM [4, 7]
+
+findDescending :: Producer [] Int -> [[Int]]
+findDescending =
+  evalConsumerT $ do
+    Just x <- next
+    r [x] =<< next
+  where
+    r prefix Nothing = return $ reverse prefix
+    r xs (Just y) = do
+      lift . guard $ y < head xs
+      r (y : xs) =<< next
+
 main :: IO ()
-main = mapM_ (>> lineSpace)
+main = do
+  mapM_ (>> lineSpace)
        [printAfterListing $ itake (2::Int) intProducer
        ,printProducer intProducer
        ,evalConsumerT testConsumer intProducer
        ,evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
        ,execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
        ,printAfterListing $ izip strProducer intProducer]
+  print $ findDescending listProducer
+

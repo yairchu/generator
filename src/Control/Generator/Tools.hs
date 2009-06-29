@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Control.Generator.Tools(
-  append, execute, fromList, iconcat,
+  append, cons', execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilength, imap,
   ifilter, itake, iTakeWhile, izip, izipWith, izipP2,
   liftProdMonad, toList
@@ -52,16 +52,13 @@ ifoldr' consFunc start =
     step x = return . consFunc x . mmerge
 
 imap :: Monad m => (a -> m b) -> Producer m a -> Producer m b
-imap func =
-  ifoldr' step empty
-  where
-    step a bs =
-      mmerge $ do
-      b <- func a
-      return $ cons b bs
+imap func = ifoldr' (cons . func) empty
 
 execute :: Monad m => Producer m a -> m ()
 execute = ifoldl' (const . return) ()
+
+cons' :: Monad m => a -> Producer m a -> Producer m a
+cons' = cons . return
 
 ifilter :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
 ifilter cond =
@@ -70,7 +67,7 @@ ifilter cond =
     r x xs =
       mmerge $ do
       b <- cond x
-      return $ if b then cons x xs else xs
+      return $ if b then cons' x xs else xs
 
 toList :: (Monad m) => Producer m a -> m [a]
 toList =
@@ -82,13 +79,15 @@ iTakeWhile :: Monad m => (a -> Bool) -> Producer m a -> Producer m a
 iTakeWhile func =
   ifoldr' r empty
   where
-    r x xs = if func x then cons x xs else empty
+    r x xs
+      | func x = cons' x xs
+      | otherwise = empty
 
 fromList :: (Monad m) => [a] -> Producer m a
-fromList = foldr cons empty
+fromList = foldr cons' empty
 
 append :: Monad m => Producer m a -> Producer m a -> Producer m a
-append a b = ifoldr' cons b a
+append a b = ifoldr' cons' b a
 
 iconcat :: Monad m => Producer m (Producer m a) -> Producer m a
 iconcat = ifoldr' append empty
@@ -104,7 +103,7 @@ itake count =
     r0 c = r1 c =<< next
     r1 _ Nothing = return empty
     r1 c (Just v) =
-      return . cons v . mmerge =<< processRest (r0 (c-1))
+      return . cons' v . mmerge =<< processRest (r0 (c-1))
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
@@ -114,7 +113,7 @@ liftProdMonad =
   where
     r Nothing = return empty
     r (Just v) =
-      return . cons v . mmerge . lift =<< processRest (r =<< next)
+      return . cons' v . mmerge . lift =<< processRest (r =<< next)
 
 izipP2 :: (Monad m) =>
           Producer m v1
