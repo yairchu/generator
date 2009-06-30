@@ -2,7 +2,7 @@
 
 module Control.Generator.Tools(
   append, cons', execute, fromList, iconcat,
-  ifoldl, ifoldl', ifoldr, ifoldr', ilength, imap,
+  ifoldl, ifoldl', ifoldr, ifoldr', ilast, ilength, imap,
   ifilter, itake, iTakeWhile, izip, izipWith, izipP2,
   liftProdMonad, toList
   ) where
@@ -13,6 +13,7 @@ import Control.Generator (
 import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Monad (forever, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
+import Control.Monad.State (evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
 
 -- naming: for everything that's in prelude I add an "i" prefix,
@@ -104,6 +105,16 @@ itake count =
     r1 _ Nothing = return empty
     r1 c (Just v) =
       return . cons' v . mmerge =<< processRest (r0 (c-1))
+
+ilast :: Monad m => Producer m a -> m a
+ilast =
+  evalConsumerT $ do
+  Just x <- next
+  evalStateT r x
+  where
+    r = do
+      runMaybeT . forever $ MaybeT (lift next) >>= lift . put
+      get
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
