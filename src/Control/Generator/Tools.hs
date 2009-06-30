@@ -11,9 +11,9 @@ import Control.Generator (
   Producer, cons, empty, ConsumerT, evalConsumerT,
   mmerge, next, processRest)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
-import Control.Monad (forever, liftM2)
+import Control.Monad (forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
-import Control.Monad.State (evalStateT, get, put)
+import Control.Monad.State (StateT(..), evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
 
 -- naming: for everything that's in prelude I add an "i" prefix,
@@ -106,13 +106,14 @@ itake count =
     r1 c (Just v) =
       return . cons' v . mmerge =<< processRest (r0 (c-1))
 
+maybeForever :: Monad m => MaybeT m a -> m ()
+maybeForever = (>> return ()) . runMaybeT . forever
+
 ilast :: Monad m => Producer m a -> m a
 ilast =
   evalConsumerT $ do
   Just x <- next
-  (`evalStateT` x) $ do
-    runMaybeT . forever $ MaybeT (lift next) >>= lift . put
-    get
+  liftM snd . (`runStateT` x) . maybeForever $ MaybeT (lift next) >>= lift . put
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
@@ -139,11 +140,9 @@ izipP2 p1 p2 =
 
 izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
 izip p1 p2 =
-  izipP2 p1 p2 $ do
-  runMaybeT . forever $
-    liftM2 (,) (MaybeT (lift next)) (MaybeT next) >>=
-    lift . lift . lift . yield
-  return ()
+  izipP2 p1 p2 . maybeForever $
+  liftM2 (,) (MaybeT (lift next)) (MaybeT next) >>=
+  lift . lift . lift . yield
 
 izipWith :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
 izipWith f pA pB = imap (uncurry f) $ izip pA pB
@@ -152,11 +151,10 @@ iscanl :: Monad m => (a -> b -> m a) -> a -> Producer m b -> Producer m a
 iscanl func start =
   produce . consumeLift (evalStateT r start)
   where
-    r = do
-      runMaybeT . forever $ do
-        s <- lift get
-        lift . lift . lift $ yield s
-        x <- MaybeT $ lift next
-        put =<< (lift . lift . lift . lift) (func s x)
-      return ()
+    r =
+      maybeForever $ do
+      s <- lift get
+      lift . lift . lift $ yield s
+      x <- MaybeT $ lift next
+      put =<< (lift . lift . lift . lift) (func s x)
 
