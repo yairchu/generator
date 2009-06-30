@@ -3,7 +3,7 @@
 import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Generator.Tools (execute, imap, itake, toList, izip)
-import Control.Monad (forever, guard, mapM_)
+import Control.Monad (forever, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
@@ -68,8 +68,7 @@ printAfterListing :: Show a => Producer IO a -> IO ()
 printAfterListing p = print =<< toList p
 
 listProducer :: Producer [] Int
-listProducer =
-  produce $ do
+listProducer = produce $ do
   yield =<< lift [5, 8]
   yield =<< lift [6, 9]
   yield =<< lift [4, 7]
@@ -80,7 +79,7 @@ filterSorted =
   a <- next
   r [a] =<< next
   where
-    r xs Nothing = return . reverse $ catMaybes xs
+    r xs Nothing = return . reverse . catMaybes $ xs
     r xs y
       | y < head xs = fail ""
       | otherwise = r (y:xs) =<< next
@@ -93,6 +92,6 @@ main = do
        ,evalConsumerT testConsumer intProducer
        ,evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
        ,execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
-       ,printAfterListing $ izip strProducer intProducer]
-  print $ filterSorted listProducer
-
+       ,printAfterListing $ izip strProducer intProducer
+       ,print . toList $ listProducer
+       ,print . filterSorted $ listProducer]

@@ -127,10 +127,10 @@ liftProdMonad =
       return . cons' v . mmerge . lift =<< processRest (r =<< next)
 
 izipP2 :: (Monad m) =>
-          Producer m v1
-       -> Producer m a
-       -> ConsumerT a (ConsumerT v1 (ProducerT v m)) ()
-       -> Producer m v
+          Producer m a
+       -> Producer m b
+       -> ConsumerT b (ConsumerT a (ProducerT r m)) ()
+       -> Producer m r
 izipP2 p1 p2 =
   produce .
   (`evalConsumerT` liftProdMonad p1) .
