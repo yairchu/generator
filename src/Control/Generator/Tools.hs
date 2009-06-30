@@ -113,7 +113,7 @@ ilast :: Monad m => Producer m a -> m a
 ilast =
   evalConsumerT $ do
   Just x <- next
-  liftM snd . (`runStateT` x) . maybeForever $ MaybeT (lift next) >>= lift . put
+  liftM snd . (`runStateT` x) . maybeForever $ MaybeT (lift next) >>= put
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
@@ -153,7 +153,8 @@ iscanl func start =
   where
     r =
       maybeForever $ do
-      s <- lift get
+      s <- get
       lift . lift . lift $ yield s
       x <- MaybeT $ lift next
       put =<< (lift . lift . lift . lift) (func s x)
+
