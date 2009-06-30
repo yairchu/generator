@@ -159,4 +159,3 @@ iscanl func start =
         x <- MaybeT $ lift next
         put =<< (lift . lift . lift . lift) (func s x)
       return ()
-
