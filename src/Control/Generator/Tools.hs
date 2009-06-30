@@ -3,7 +3,7 @@
 module Control.Generator.Tools(
   append, cons', execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilast, ilength, imap,
-  ifilter, itake, iTakeWhile, izip, izipWith, izipP2,
+  ifilter, iscanl, itake, iTakeWhile, izip, izipWith, izipP2,
   liftProdMonad, toList
   ) where
 
@@ -110,11 +110,9 @@ ilast :: Monad m => Producer m a -> m a
 ilast =
   evalConsumerT $ do
   Just x <- next
-  evalStateT r x
-  where
-    r = do
-      runMaybeT . forever $ MaybeT (lift next) >>= lift . put
-      get
+  (`evalStateT` x) $ do
+    runMaybeT . forever $ MaybeT (lift next) >>= lift . put
+    get
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
@@ -126,15 +124,18 @@ liftProdMonad =
     r (Just v) =
       return . cons' v . mmerge . lift =<< processRest (r =<< next)
 
+consumeLift ::
+  (Monad (t m), Monad m, MonadTrans t) =>
+  ConsumerT a (t m) b -> Producer m a -> t m b
+consumeLift consumer = evalConsumerT consumer . liftProdMonad
+
 izipP2 :: (Monad m) =>
           Producer m v1
        -> Producer m a
        -> ConsumerT a (ConsumerT v1 (ProducerT v m)) ()
        -> Producer m v
 izipP2 p1 p2 =
-  produce .
-  (`evalConsumerT` liftProdMonad p1) .
-  (`evalConsumerT` (liftProdMonad . liftProdMonad) p2)
+  produce . (`consumeLift` p1) . (`consumeLift` liftProdMonad p2)
 
 izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
 izip p1 p2 =
@@ -146,4 +147,16 @@ izip p1 p2 =
 
 izipWith :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
 izipWith f pA pB = imap (uncurry f) $ izip pA pB
+
+iscanl :: Monad m => (a -> b -> m a) -> a -> Producer m b -> Producer m a
+iscanl func start =
+  produce . consumeLift (evalStateT r start)
+  where
+    r = do
+      runMaybeT . forever $ do
+        s <- lift get
+        lift . lift . lift $ yield s
+        x <- MaybeT $ lift next
+        put =<< (lift . lift . lift . lift) (func s x)
+      return ()
 
