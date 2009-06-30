@@ -125,17 +125,14 @@ izipP2 p1 p2 =
   (`evalConsumerT` liftProdMonad p1) .
   (`evalConsumerT` (liftProdMonad . liftProdMonad) p2)
 
--- TODO: Base izipWith on izip and not vice versa
-
-izipWith :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
-izipWith f p1 p2 =
+izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
+izip p1 p2 =
   izipP2 p1 p2 $ do
   runMaybeT . forever $
-    liftM2 f (MaybeT $ lift next) (MaybeT next) >>=
-    lift . lift . lift . lift >>=
+    liftM2 (,) (MaybeT (lift next)) (MaybeT next) >>=
     lift . lift . lift . yield
   return ()
 
-izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
-izip = izipWith $ \a b -> return (a, b)
+izipWith :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
+izipWith f pA pB = imap (uncurry f) $ izip pA pB
 
