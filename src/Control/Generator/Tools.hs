@@ -157,4 +157,3 @@ iscanl func start =
       lift . lift . lift $ yield s
       x <- MaybeT $ lift next
       put =<< (lift . lift . lift . lift) (func s x)
-
