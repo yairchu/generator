@@ -93,7 +93,7 @@ yieldExpCons = do
   liftIO . print . fromJust =<< next
 
 main :: IO ()
-main = do
+main =
   mapM_ (>> lineSpace)
        [printAfterListing $ itake (2::Int) intProducer
        ,printProducer intProducer

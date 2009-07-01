@@ -145,7 +145,7 @@ izip p1 p2 =
   lift . lift . lift . yield
 
 izipWith :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
-izipWith f pA pB = imap (uncurry f) $ izip pA pB
+izipWith f p = imap (uncurry f) . izip p
 
 iscanl :: Monad m => (a -> b -> m a) -> a -> Producer m b -> Producer m a
 iscanl func start =
