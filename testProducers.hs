@@ -5,9 +5,9 @@ import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Generator.Tools (execute, imap, itake, toList, izip)
 import Control.Monad (forever, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
-import Control.Monad.State (evalStateT, get, modify)
+import Control.Monad.State (StateT, evalStateT, get, modify, put)
 import Control.Monad.Trans (MonadIO(..), lift)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromJust)
 
 intProducer :: MonadIO m => Producer m Int
 intProducer =
@@ -67,22 +67,30 @@ printProducer = execute . imap print
 printAfterListing :: Show a => Producer IO a -> IO ()
 printAfterListing p = print =<< toList p
 
-listProducer :: Producer [] Int
-listProducer = produce $ do
-  yield =<< lift [5, 8]
-  yield =<< lift [6, 9]
-  yield =<< lift [4, 7]
-
-filterSorted :: (Monad m, Ord a) => Producer m a -> m [a]
-filterSorted = 
-  evalConsumerT $ do
-  a <- next
-  r [a] =<< next
+permute :: [a] -> Producer [] a
+permute =
+  produce . r
   where
-    r xs Nothing = return . reverse . catMaybes $ xs
-    r xs y
-      | y < head xs = fail ""
-      | otherwise = r (y:xs) =<< next
+    r [] = return ()
+    r xs = do
+      i <- lift [0 .. length xs - 1]
+      let (pre, x : post) = splitAt i xs
+      yield x
+      r $ pre ++ post
+
+yieldExpProd :: Producer (StateT String IO) Int
+yieldExpProd =
+  produce . forever $ yield . length =<< lift get
+
+yieldExpCons :: ConsumerT Int (StateT String IO) ()
+yieldExpCons = do
+  lift $ put "blah"
+  liftIO . print . fromJust =<< next
+  lift $ put "hello world"
+  liftIO . print . fromJust =<< next
+  lift $ put "hurray"
+  liftIO . print . fromJust =<< next
+  liftIO . print . fromJust =<< next
 
 main :: IO ()
 main = do
@@ -93,5 +101,6 @@ main = do
        ,evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
        ,execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
        ,printAfterListing $ izip strProducer intProducer
-       ,print . toList $ listProducer
-       ,print . filterSorted $ listProducer]
+       ,print . toList $ permute "abc"
+       ,evalStateT (evalConsumerT yieldExpCons yieldExpProd) "moo"
+       ]
