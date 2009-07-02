@@ -1,15 +1,15 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Control.Generator.Tools(
-  append, cons', execute, fromList, iconcat,
+  cons', execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilast, ilength, imap,
   ifilter, iscanl, itake, iTakeWhile, izip, izipWith, izipP2,
   liftProdMonad, toList
   ) where
 
 import Control.Generator (
-  Producer, cons, empty, ConsumerT, evalConsumerT,
-  mmerge, next, processRest)
+  ConsumerT, Producer, append, cons, empty,
+  evalConsumerT, mmerge, next, processRest)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Monad (forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
@@ -86,9 +86,6 @@ iTakeWhile func =
 
 fromList :: (Monad m) => [a] -> Producer m a
 fromList = foldr cons' empty
-
-append :: Monad m => Producer m a -> Producer m a -> Producer m a
-append a b = ifoldr' cons' b a
 
 iconcat :: Monad m => Producer m (Producer m a) -> Producer m a
 iconcat = ifoldr' append empty
