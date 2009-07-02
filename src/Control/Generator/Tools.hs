@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Control.Generator.Tools(
-  cons', execute, fromList, iconcat,
+  execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilast, ilength, imap,
   ifilter, iscanl, itake, iTakeWhile, izip, izipWith, izipP2,
   liftProdMonad, toList
@@ -9,7 +9,7 @@ module Control.Generator.Tools(
 
 import Control.Generator (
   ConsumerT, Producer, append, cons, empty,
-  evalConsumerT, mmerge, next, processRest)
+  evalConsumerT, mmerge, next, processRest, singleItem)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Monad (forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
@@ -52,14 +52,14 @@ ifoldr' consFunc start =
   where
     step x = return . consFunc x . mmerge
 
+singleItemM :: Monad m => m a -> Producer m a
+singleItemM m = mmerge $ m >>= return . singleItem
+
 imap :: Monad m => (a -> m b) -> Producer m a -> Producer m b
-imap func = ifoldr' (cons . func) empty
+imap func = ifoldr' (append . singleItemM . func) empty
 
 execute :: Monad m => Producer m a -> m ()
 execute = ifoldl' (const . return) ()
-
-cons' :: Monad m => a -> Producer m a -> Producer m a
-cons' = cons . return
 
 ifilter :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
 ifilter cond =
@@ -68,7 +68,7 @@ ifilter cond =
     r x xs =
       mmerge $ do
       b <- cond x
-      return $ if b then cons' x xs else xs
+      return $ if b then cons x xs else xs
 
 toList :: (Monad m) => Producer m a -> m [a]
 toList =
@@ -81,11 +81,11 @@ iTakeWhile func =
   ifoldr' r empty
   where
     r x xs
-      | func x = cons' x xs
+      | func x = cons x xs
       | otherwise = empty
 
 fromList :: (Monad m) => [a] -> Producer m a
-fromList = foldr cons' empty
+fromList = foldr cons empty
 
 iconcat :: Monad m => Producer m (Producer m a) -> Producer m a
 iconcat = ifoldr' append empty
@@ -101,7 +101,7 @@ itake count =
     r0 c = r1 c =<< next
     r1 _ Nothing = return empty
     r1 c (Just v) =
-      return . cons' v . mmerge =<< processRest (r0 (c-1))
+      return . cons v . mmerge =<< processRest (r0 (c-1))
 
 maybeForever :: Monad m => MaybeT m a -> m ()
 maybeForever = (>> return ()) . runMaybeT . forever
@@ -120,7 +120,7 @@ liftProdMonad =
   where
     r Nothing = return empty
     r (Just v) =
-      return . cons' v . mmerge . lift =<< processRest (r =<< next)
+      return . cons v . mmerge . lift =<< processRest (r =<< next)
 
 consumeLift ::
   (Monad (t m), Monad m, MonadTrans t) =>

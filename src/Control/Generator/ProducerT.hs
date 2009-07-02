@@ -24,7 +24,7 @@ instance MonadIO m => MonadIO (ProducerT v m) where
   liftIO = lift . liftIO
 
 yield :: Monad m => v -> ProducerT v m ()
-yield x = ProducerT . Cont $ cons (return x) . ($ ())
+yield x = ProducerT . Cont $ cons x . ($ ())
 
 yields :: Monad m => Producer m v -> ProducerT v m ()
 yields xs = ProducerT . Cont $ append xs . ($ ())

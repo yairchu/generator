@@ -3,7 +3,7 @@
 module Control.Generator(
   Producer, ConsumerT,
   append, empty, evalConsumerT, cons,
-  mmerge, next, processRest
+  mmerge, next, processRest, singleItem
   ) where
 
 import Control.Monad (when)
@@ -19,22 +19,21 @@ newtype ConsProducer m v = ConsProducer { unConsProducer :: m (Maybe (v, ConsPro
 -- Like DList
 newtype Producer m v = Producer { unProducer :: ConsProducer m v -> ConsProducer m v }
 
-singleItem :: Monad m => m a -> Producer m a
-singleItem m =
-  Producer $ \rest -> ConsProducer $ do
-  a <- m
-  return $ Just (a, rest)
+singleItem :: Monad m => a -> Producer m a
+singleItem a =
+  Producer $ ConsProducer . return . Just . ((,) a)
 
 append :: Monad m => Producer m a -> Producer m a -> Producer m a
 append (Producer a) (Producer b) = Producer $ a . b
 
-cons :: Monad m => m a -> Producer m a -> Producer m a
+cons :: Monad m => a -> Producer m a -> Producer m a
 cons = append . singleItem
 
 mmerge :: Monad m => m (Producer m v) -> Producer m v
 mmerge m =
-  Producer $ \rest -> ConsProducer $
-  m >>= unConsProducer . flip unProducer rest
+  Producer $ \rest -> ConsProducer $ do
+  a <- m
+  unConsProducer $ unProducer a rest
 
 empty :: Monad m => Producer m v
 empty = Producer id
