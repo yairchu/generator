@@ -1,6 +1,6 @@
 {-# OPTIONS -O2 -Wall #-}
 
-import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
+import Control.Generator (ConsumerT, empty, evalConsumerT, Producer, next)
 import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
 import Control.Generator.Tools (execute, imap, itake, toList, izip)
 import Control.Monad (forever, mapM_)
@@ -68,15 +68,13 @@ printAfterListing :: Show a => Producer IO a -> IO ()
 printAfterListing p = print =<< toList p
 
 permute :: [a] -> Producer [] a
-permute =
-  produce . r
-  where
-    r [] = return ()
-    r xs = do
-      i <- lift [0 .. length xs - 1]
-      let (pre, x : post) = splitAt i xs
-      yield x
-      r $ pre ++ post
+permute [] = empty
+permute xs =
+  produce $ do
+  i <- lift [0 .. length xs - 1]
+  let (pre, x : post) = splitAt i xs
+  yield x
+  yields . permute $ pre ++ post
 
 yieldExpProd :: Producer (StateT String IO) Int
 yieldExpProd =
@@ -88,15 +86,6 @@ yieldExpCons = do
   liftIO . print . fromJust =<< next
   lift $ put "hello world"
   liftIO . print . fromJust =<< next
-  lift $ put "hurray"
-  liftIO . print . fromJust =<< next
-  liftIO . print . fromJust =<< next
-
-yieldsTest :: Producer IO Int
-yieldsTest =
-  produce $ do
-  yields intProducer
-  yields intProducer
 
 main :: IO ()
 main =
@@ -109,5 +98,5 @@ main =
        ,printAfterListing $ izip strProducer intProducer
        ,print . toList $ permute "abc"
        ,evalStateT (evalConsumerT yieldExpCons yieldExpProd) "moo"
-       ,printProducer yieldsTest
        ]
+
