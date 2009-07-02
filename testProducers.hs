@@ -1,13 +1,13 @@
 {-# OPTIONS -O2 -Wall #-}
 
 import Control.Generator (ConsumerT, evalConsumerT, Producer, next)
-import Control.Generator.ProducerT (ProducerT, produce, yield)
+import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
 import Control.Generator.Tools (execute, imap, itake, toList, izip)
 import Control.Monad (forever, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (StateT, evalStateT, get, modify, put)
 import Control.Monad.Trans (MonadIO(..), lift)
-import Data.Maybe (catMaybes, fromJust)
+import Data.Maybe (fromJust)
 
 intProducer :: MonadIO m => Producer m Int
 intProducer =
@@ -92,6 +92,12 @@ yieldExpCons = do
   liftIO . print . fromJust =<< next
   liftIO . print . fromJust =<< next
 
+yieldsTest :: Producer IO Int
+yieldsTest =
+  produce $ do
+  yields intProducer
+  yields intProducer
+
 main :: IO ()
 main =
   mapM_ (>> lineSpace)
@@ -103,4 +109,5 @@ main =
        ,printAfterListing $ izip strProducer intProducer
        ,print . toList $ permute "abc"
        ,evalStateT (evalConsumerT yieldExpCons yieldExpProd) "moo"
+       ,printProducer yieldsTest
        ]
