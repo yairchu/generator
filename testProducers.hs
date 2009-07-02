@@ -2,32 +2,32 @@
 
 import Control.Generator (ConsumerT, empty, evalConsumerT, Producer, next)
 import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
-import Control.Generator.Tools (execute, imap, itake, toList, izip)
+import Control.Generator.Tools (execute, imap, itake, toList, izip, liftProdMonad)
 import Control.Monad (forever, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (StateT, evalStateT, get, modify, put)
 import Control.Monad.Trans (MonadIO(..), lift)
 import Data.Maybe (fromJust)
 
-intProducer :: MonadIO m => Producer m Int
+intProducer :: Producer IO Int
 intProducer =
     produce $ do
-      liftIO $ putStrLn "yielding 1"
+      lift . putStrLn $ "yielding 1"
       yield 1
-      liftIO $ putStrLn "yielding 10"
+      lift . putStrLn $ "yielding 10"
       yield 10
-      liftIO $ putStrLn "yielding 100"
+      lift . putStrLn $ "yielding 100"
       yield 100
-      liftIO $ putStrLn "int producer is done!"
+      lift . putStrLn $ "int producer is done!"
 
-strProducer :: MonadIO m => Producer m String
+strProducer :: Producer IO String
 strProducer =
     produce $ do
-      liftIO $ putStrLn "yielding string1"
+      lift . putStrLn $ "yielding string1"
       yield "string1"
-      liftIO $ putStrLn "yielding string2"
+      lift . putStrLn $ "yielding string2"
       yield "string2"
-      liftIO $ putStrLn "string producer is done!"
+      lift . putStrLn $ "string producer is done!"
 
 testConsumer :: ConsumerT Int IO ()
 testConsumer = do
@@ -93,10 +93,9 @@ main =
        [printAfterListing $ itake (2::Int) intProducer
        ,printProducer intProducer
        ,evalConsumerT testConsumer intProducer
-       ,evalConsumerT (evalConsumerT testConsumer2 strProducer) intProducer
-       ,execute . imap print . itake (3::Int) . produce $ evalConsumerT cumSum intProducer
-       ,printAfterListing $ izip strProducer intProducer
+       ,evalConsumerT (evalConsumerT testConsumer2 . liftProdMonad $ strProducer) intProducer
+       ,execute . imap print . itake (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
+       ,printAfterListing . izip strProducer $ intProducer
        ,print . toList $ permute "abc"
        ,evalStateT (evalConsumerT yieldExpCons yieldExpProd) "moo"
        ]
-
