@@ -61,28 +61,26 @@ imap func = ifoldr' (append . singleItemM . func) empty
 execute :: Monad m => Producer m a -> m ()
 execute = ifoldl' (const . return) ()
 
-ifilter :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
-ifilter cond =
-  ifoldr' r empty
-  where
-    r x xs =
-      mmerge $ do
-      b <- cond x
-      return $ if b then cons x xs else xs
-
 toList :: (Monad m) => Producer m a -> m [a]
 toList =
   ifoldr step $ return []
   where
     step x = (return . (x :) =<<)
 
-iTakeWhile :: Monad m => (a -> Bool) -> Producer m a -> Producer m a
-iTakeWhile func =
-  ifoldr' r empty
-  where
-    r x xs
-      | func x = cons x xs
-      | otherwise = empty
+-- used in ifilter and iTakeWhile
+ifilterStep :: Monad m => (a -> m Bool) -> (Producer m a -> Producer m a) -> a -> Producer m a -> Producer m a
+ifilterStep cond onFalse x xs =
+  mmerge $ do
+  b <- cond x
+  return $ if b then cons x xs else onFalse xs
+
+ifilter :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
+ifilter cond =
+  ifoldr' (ifilterStep cond id) empty
+
+iTakeWhile :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
+iTakeWhile cond =
+  ifoldr' (ifilterStep cond (const empty)) empty
 
 fromList :: (Monad m) => [a] -> Producer m a
 fromList = foldr cons empty
