@@ -64,9 +64,6 @@ lineSpace = putStrLn ""
 printProducer :: Show a => Producer IO a -> IO ()
 printProducer = execute . imap print
 
-printAfterListing :: Show a => Producer IO a -> IO ()
-printAfterListing p = print =<< toList p
-
 permute :: [a] -> Producer [] a
 permute [] = empty
 permute xs =
@@ -87,12 +84,12 @@ memoTest = do
 main :: IO ()
 main =
   mapM_ (>> lineSpace)
-       [printAfterListing $ itake (2::Int) intProducer
-       ,printProducer intProducer
+       [printProducer intProducer
+       ,printProducer . itake (2::Int) $ intProducer
        ,evalConsumerT testConsumer intProducer
        ,evalConsumerT (evalConsumerT testConsumer2 . liftProdMonad $ strProducer) intProducer
        ,execute . imap print . itake (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
-       ,printAfterListing . izip strProducer $ intProducer
+       ,printProducer . izip strProducer $ intProducer
        ,print . toList $ permute "abc"
        ,memoTest
        ]
