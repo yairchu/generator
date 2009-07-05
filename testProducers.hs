@@ -82,6 +82,7 @@ memoTest = do
   putStrLn "going to consume"
   printProducer prod
   printProducer prod
+  printProducer prod
 
 main :: IO ()
 main =

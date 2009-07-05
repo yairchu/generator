@@ -12,13 +12,9 @@ memoIO :: MonadIO m => m a -> IO (m a)
 memoIO action = do
   ref <- liftIO $ newMVar Nothing
   return $ do
-    x <- liftIO $ takeMVar ref
-    case x of
-      Just res -> return res
-      Nothing -> do
-        res <- action
-        liftIO . putMVar ref $ Just res
-        return res
+    x <- maybe action return =<< liftIO (takeMVar ref)
+    liftIO . putMVar ref $ Just x
+    return x
 
 memo :: MonadIO m => Producer m v -> IO (Producer m v)
 memo =
