@@ -121,9 +121,8 @@ transformProdMonad trans =
   where
     r Nothing = return empty
     r (Just x) =
-      processRest (next >>= r) >>=
-      lift . trans >>=
-      return . cons x . mmerge
+      liftM (cons x . mmerge) $
+      processRest (next >>= r) >>= lift . trans
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
