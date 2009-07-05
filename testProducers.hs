@@ -1,6 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 import Control.Generator (ConsumerT, empty, evalConsumerT, Producer, next)
+import Control.Generator.Memo (memo)
 import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
 import Control.Generator.Tools (execute, imap, itake, toList, izip, liftProdMonad)
 import Control.Monad (forever, mapM_)
@@ -76,16 +77,12 @@ permute xs =
   yield x
   yields . permute $ pre ++ post
 
-yieldExpProd :: Producer (StateT String IO) Int
-yieldExpProd =
-  produce . forever $ yield . length =<< lift get
-
-yieldExpCons :: ConsumerT Int (StateT String IO) ()
-yieldExpCons = do
-  lift $ put "blah"
-  liftIO . print . fromJust =<< next
-  lift $ put "hello world"
-  liftIO . print . fromJust =<< next
+memoTest :: IO ()
+memoTest = do
+  prod <- memo intProducer
+  putStrLn "going to consume"
+  printProducer prod
+  printProducer prod
 
 main :: IO ()
 main =
@@ -97,5 +94,6 @@ main =
        ,execute . imap print . itake (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
        ,printAfterListing . izip strProducer $ intProducer
        ,print . toList $ permute "abc"
-       ,evalStateT (evalConsumerT yieldExpCons yieldExpProd) "moo"
+       ,memoTest
        ]
+
