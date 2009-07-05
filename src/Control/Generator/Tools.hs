@@ -115,19 +115,20 @@ ilast =
   liftM snd . (`runStateT` x) . maybeForever $ MaybeT (lift next) >>= put
 
 transformProdMonad :: (Monad m, Monad s) =>
-  (forall a. m a -> s a) -> Producer m v -> Producer s v
+  (forall a. m a -> m (s a)) -> Producer m v -> m (Producer s v)
 transformProdMonad trans =
-  mmerge . trans . evalConsumerT (next >>= r)
+  evalConsumerT (next >>= r)
   where
     r Nothing = return empty
     r (Just x) =
       processRest (next >>= r) >>=
-      return . cons x . mmerge . trans
+      lift . trans >>=
+      return . cons x . mmerge
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
   Producer m a -> Producer (t m) a
-liftProdMonad = transformProdMonad lift
+liftProdMonad = mmerge . lift . transformProdMonad (return . lift)
 
 consumeLift ::
   (Monad (t m), Monad m, MonadTrans t) =>

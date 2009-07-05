@@ -3,9 +3,8 @@
 module Control.Generator.Memo (memo) where
 
 import Control.Concurrent.MVar (newMVar, putMVar, takeMVar)
-import Control.Generator (
-  Producer, cons, empty, evalConsumerT,
-  mmerge, next, processRest)
+import Control.Generator (Producer, mmerge)
+import Control.Generator.Tools (transformProdMonad)
 import Control.Monad (liftM)
 import Control.Monad.Trans (MonadIO(..))
 
@@ -23,13 +22,6 @@ memoIO action = do
 
 memo :: MonadIO m => Producer m v -> IO (Producer m v)
 memo =
-  liftM mmerge . memoIO . evalConsumerT r
-  where
-    r = do
-      mx <- next
-      case mx of
-        Nothing -> return empty
-        Just x ->
-          return . cons x . mmerge =<<
-          liftIO . memoIO =<< processRest r
+  liftM mmerge . memoIO .
+  transformProdMonad (liftIO . memoIO)
 
