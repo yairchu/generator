@@ -21,9 +21,9 @@ memoIO action = do
         liftIO . putMVar ref $ Just res
         return res
 
-memo :: MonadIO m => Producer m v -> m (Producer m v)
+memo :: MonadIO m => Producer m v -> IO (Producer m v)
 memo =
-  liftM mmerge . liftIO . memoIO . evalConsumerT r
+  liftM mmerge . memoIO . evalConsumerT r
   where
     r = do
       mx <- next

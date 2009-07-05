@@ -6,9 +6,8 @@ import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
 import Control.Generator.Tools (execute, imap, itake, toList, izip, liftProdMonad)
 import Control.Monad (forever, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
-import Control.Monad.State (StateT, evalStateT, get, modify, put)
+import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
-import Data.Maybe (fromJust)
 
 intProducer :: Producer IO Int
 intProducer =
