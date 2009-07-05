@@ -10,7 +10,7 @@ import Control.Monad.Trans (MonadIO(..))
 
 memoIO :: MonadIO m => m a -> IO (m a)
 memoIO action = do
-  ref <- liftIO $ newMVar Nothing
+  ref <- newMVar Nothing
   return $ do
     x <- maybe action return =<< liftIO (takeMVar ref)
     liftIO . putMVar ref $ Just x
