@@ -1,4 +1,5 @@
 {-# OPTIONS -O2 -Wall #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, Rank2Types, UndecidableInstances #-}
 
 module Control.Generator.Memo (memo) where
 
@@ -8,21 +9,27 @@ import Control.Monad (liftM)
 import Control.Monad.Trans (MonadIO(..))
 import Data.MRef (
   newDefaultMRef, putDefaultMRef, takeDefaultMRef)
+import Data.MRef.Classes (DefaultMRef, NewMRef, PutMRef, TakeMRef)
 
-memoIO :: MonadIO m => m a -> IO (m a)
-memoIO action = do
+class (DefaultMRef r m a, NewMRef r m a, PutMRef r m a, TakeMRef r m a) => MRef r m a
+instance (DefaultMRef r m a, NewMRef r m a, PutMRef r m a, TakeMRef r m a) => MRef r m a
+
+memoM :: (Monad m, Monad s, MRef r m (Maybe a)) =>
+  (forall x. m x -> s x) -> s a -> m (s a)
+memoM liftFunc action = do
   ref <- newDefaultMRef Nothing
   return $ do
-    x <- liftIO $ takeDefaultMRef ref
+    x <- liftFunc $ takeDefaultMRef ref
     case x of
       Just res -> return res
       Nothing -> do
         res <- action
-        liftIO . putDefaultMRef ref $ Just res
+        liftFunc . putDefaultMRef ref $ Just res
         return res
 
-memo :: MonadIO m => Producer m v -> IO (Producer m v)
-memo =
-  liftM mmerge . memoIO .
-  transformProdMonad (liftIO . memoIO)
+memo :: (Monad m, Monad s, MRef r m (Maybe a)) =>
+  (forall x. m x -> s x) -> Producer m a -> IO (Producer m b)
+memo liftFunc =
+  liftM mmerge . memoM liftFunc .
+  transformProdMonad (liftIO . memoM liftFunc)
 
