@@ -21,7 +21,7 @@ newtype Producer m v = Producer { unProducer :: ConsProducer m v -> ConsProducer
 
 singleItem :: Monad m => a -> Producer m a
 singleItem a =
-  Producer $ ConsProducer . return . Just . ((,) a)
+  Producer $ ConsProducer . return . Just . (,) a
 
 append :: Monad m => Producer m a -> Producer m a -> Producer m a
 append (Producer a) (Producer b) = Producer $ a . b

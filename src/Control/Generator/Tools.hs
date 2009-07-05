@@ -53,10 +53,13 @@ ifoldr' consFunc start =
     step x = return . consFunc x . mmerge
 
 singleItemM :: Monad m => m a -> Producer m a
-singleItemM m = mmerge $ m >>= return . singleItem
+singleItemM = mmerge . liftM singleItem
+
+consM :: Monad m => m a -> Producer m a -> Producer m a
+consM = append . singleItemM
 
 imap :: Monad m => (a -> m b) -> Producer m a -> Producer m b
-imap func = ifoldr' (append . singleItemM . func) empty
+imap func = ifoldr' (consM . func) empty
 
 execute :: Monad m => Producer m a -> m ()
 execute = ifoldl' (const . return) ()
