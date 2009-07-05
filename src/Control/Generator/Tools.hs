@@ -1,10 +1,11 @@
 {-# OPTIONS -O2 -Wall #-}
+{-# LANGUAGE Rank2Types #-}
 
 module Control.Generator.Tools(
   execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilast, ilength, imap,
   ifilter, iscanl, itake, iTakeWhile, izip, izipWith, izipP2,
-  liftProdMonad, toList
+  liftProdMonad, toList, transformProdMonad
   ) where
 
 import Control.Generator (
@@ -113,15 +114,20 @@ ilast =
   Just x <- next
   liftM snd . (`runStateT` x) . maybeForever $ MaybeT (lift next) >>= put
 
+transformProdMonad :: (Monad m, Monad s) =>
+  (forall a. m a -> s a) -> Producer m v -> Producer s v
+transformProdMonad trans =
+  mmerge . trans . evalConsumerT (next >>= r)
+  where
+    r Nothing = return empty
+    r (Just x) =
+      processRest (next >>= r) >>=
+      return . cons x . mmerge . trans
+
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
   Producer m a -> Producer (t m) a
-liftProdMonad =
-  mmerge . lift . evalConsumerT (r =<< next)
-  where
-    r Nothing = return empty
-    r (Just v) =
-      return . cons v . mmerge . lift =<< processRest (r =<< next)
+liftProdMonad = transformProdMonad lift
 
 consumeLift ::
   (Monad (t m), Monad m, MonadTrans t) =>
