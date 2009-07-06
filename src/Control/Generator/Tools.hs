@@ -41,11 +41,11 @@ ifoldl' step =
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Producer m a -> m b
 ifoldr consFunc nilFunc =
-  evalConsumerT $ r =<< next
-  where
-    r Nothing = lift nilFunc
-    r (Just v) =
-      lift . consFunc v =<< processRest (r =<< next)
+  evalConsumerT . fix $ \rest -> do
+    mx <- next
+    case mx of
+      Nothing -> lift nilFunc
+      Just x -> lift . consFunc x =<< processRest rest
 
 -- for operations that build Producers, combine step with the mmerge etc boiler-plate
 ifoldr' :: Monad m => (b -> Producer m a -> Producer m a) -> Producer m a -> Producer m b -> Producer m a
