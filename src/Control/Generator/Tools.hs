@@ -112,9 +112,10 @@ maybeForever = (>> return ()) . runMaybeT . forever
 
 ilast :: Monad m => Producer m a -> m a
 ilast =
-  evalConsumerT $ do
-  Just x <- next
-  liftM snd . (`runStateT` x) . maybeForever $ MaybeT (lift next) >>= put
+  evalConsumerT .
+  liftM snd .
+  (`runStateT` undefined) .
+  maybeForever $ MaybeT (lift next) >>= put
 
 transformProdMonad :: (Monad m, Monad s) =>
   (forall a. m a -> m (s a)) -> Producer m v -> m (Producer s v)
