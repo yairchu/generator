@@ -16,6 +16,7 @@ import Control.Monad (forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (StateT(..), evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
+import Data.Function (fix)
 
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convenient importing
@@ -97,13 +98,14 @@ ilength = ifoldl' (const . return . (+ 1))  0
 
 itake :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
 itake count =
-  mmerge . evalConsumerT (r0 count)
+  mmerge . evalConsumerT (foldr r (return empty) [1..count])
   where
-    r0 0 = return empty
-    r0 c = r1 c =<< next
-    r1 _ Nothing = return empty
-    r1 c (Just v) =
-      return . cons v . mmerge =<< processRest (r0 (c-1))
+    r _ rest = do
+      mx <- next
+      case mx of
+        Nothing -> return empty
+        Just x ->
+          return . cons x . mmerge =<< processRest rest
 
 maybeForever :: Monad m => MaybeT m a -> m ()
 maybeForever = (>> return ()) . runMaybeT . forever
@@ -117,12 +119,13 @@ ilast =
 transformProdMonad :: (Monad m, Monad s) =>
   (forall a. m a -> m (s a)) -> Producer m v -> m (Producer s v)
 transformProdMonad trans =
-  evalConsumerT (next >>= r)
-  where
-    r Nothing = return empty
-    r (Just x) =
-      liftM (cons x . mmerge) $
-      processRest (next >>= r) >>= lift . trans
+  evalConsumerT . fix $ \rest -> do
+    mx <- next
+    case mx of
+      Nothing -> return empty
+      Just x ->
+        liftM (cons x . mmerge) $
+        processRest rest >>= lift . trans
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
