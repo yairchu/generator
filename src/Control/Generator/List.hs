@@ -22,7 +22,7 @@ dfs :: Producer [] a -> [a]
 dfs = search id concat
 
 bfsLayers :: Producer [] a -> [[a]]
-bfsLayers = search (: []) (map concat . transpose)
+bfsLayers = search return (map concat . transpose)
 
 bfs :: Producer [] a -> [a]
 bfs = concat . bfsLayers
