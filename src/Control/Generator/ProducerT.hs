@@ -5,12 +5,19 @@ module Control.Generator.ProducerT (
   ) where
 
 import Control.Generator (Producer, append, cons, empty, mmerge)
-import Control.Monad (liftM)
+import Control.Applicative (Applicative(..))
+import Control.Monad (liftM, ap)
 import Control.Monad.Cont (Cont (..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 
 newtype ProducerT v m a =
   ProducerT { unProducerT :: Cont (Producer m v) a }
+
+instance Monad m => Functor (ProducerT v m) where
+  fmap = liftM
+instance Monad m => Applicative (ProducerT v m) where
+  pure = return
+  (<*>) = ap
 
 instance Monad m => Monad (ProducerT v m) where
   return = ProducerT . return
