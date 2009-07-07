@@ -15,7 +15,7 @@ search trans merge prod =
     mx <- next
     case mx of
       Nothing -> lift []
-      Just x -> do
+      Just x ->
         liftM ((trans x :) . merge) $ processRest rest
 
 dfs :: Producer [] a -> [a]
