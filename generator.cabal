@@ -13,6 +13,7 @@ Library
   Extensions:
   Build-Depends:       base, haskell98, mtl, MaybeT
   Exposed-modules:     Control.Generator,
+                       Control.Generator.List,
                        Control.Generator.Memo,
                        Control.Generator.ProducerT,
                        Control.Generator.Tools
