@@ -9,26 +9,20 @@ import Control.Monad.Trans (lift)
 import Data.Function (fix)
 import Data.List (transpose)
 
-dfs :: Producer [] a -> [a]
-dfs =
-  evalConsumerT . fix $ \rest -> do
+search :: (a -> b) -> ([[b]] -> [b]) -> Producer [] a -> [b]
+search trans merge prod =
+  merge . (`evalConsumerT` prod) . fix $ \rest -> do
     mx <- next
     case mx of
       Nothing -> lift []
       Just x -> do
-        r <- processRest rest
-        lift (x : r)
+        liftM ((trans x :) . merge) $ processRest rest
+
+dfs :: Producer [] a -> [a]
+dfs = search id concat
 
 bfsLayers :: Producer [] a -> [[a]]
-bfsLayers prod =
-  process . (`evalConsumerT` prod) . fix $ \rest -> do
-    mx <- next
-    case mx of
-      Nothing -> lift []
-      Just x ->
-        liftM (([x] :) . process) $ processRest rest
-  where
-    process = map concat . transpose
+bfsLayers = search (: []) (map concat . transpose)
 
 bfs :: Producer [] a -> [a]
 bfs = concat . bfsLayers
@@ -43,13 +37,5 @@ mergeOn f =
     merge2 xs ys = xs ++ ys
 
 bestFirstSearch :: Ord n => Producer [] (a, n) -> [a]
-bestFirstSearch prod =
-  map fst . process . (`evalConsumerT` prod) . fix $ \rest -> do
-    mx <- next
-    case mx of
-      Nothing -> lift []
-      Just x -> do
-        liftM ((x :) . process) $ processRest rest
-  where
-    process = mergeOn snd
+bestFirstSearch = map fst . search id (mergeOn snd)
 
