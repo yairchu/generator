@@ -1,5 +1,5 @@
 module Control.Generator.List (
-  dfs, bfs, bfsLayers, bestFirstSearch
+  dfs, bfs, bfsLayers, bestFirstSearch, prune
   ) where
 
 import Control.Generator (
@@ -38,4 +38,7 @@ mergeOn f =
 
 bestFirstSearch :: Ord n => Producer [] (a, n) -> [a]
 bestFirstSearch = map fst . search id (mergeOn snd)
+
+prune :: (a -> Bool) -> a -> [a]
+prune cond x = [x | cond x]
 
