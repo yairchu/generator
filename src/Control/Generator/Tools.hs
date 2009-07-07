@@ -126,7 +126,7 @@ transformProdMonad trans =
       Nothing -> return empty
       Just x ->
         liftM (cons x . mmerge) $
-        processRest rest >>= lift . trans
+        lift . trans =<< processRest rest
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
