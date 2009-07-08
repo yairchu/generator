@@ -1,8 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Control.Generator.List (
-  dfs, bfs, bfsLayers, bestFirstSearch,
-  prune, bestFirstSearchSortedChildren
+  dfs, bfs, bfsLayers, bestFirstSearchOn,
+  prune, bestFirstSearchSortedChildrenOn
   ) where
 
 import Control.Generator (
@@ -39,8 +39,8 @@ mergeOn f =
       | otherwise = y : merge2 (x:xs) ys
     merge2 xs ys = xs ++ ys
 
-bestFirstSearch :: Ord n => Producer [] (a, n) -> [a]
-bestFirstSearch = map fst . search id (mergeOn snd)
+bestFirstSearchOn :: Ord o => (a -> o) -> Producer [] a -> [a]
+bestFirstSearchOn = search id . mergeOn
 
 prune :: (a -> Bool) -> a -> [a]
 prune cond x = [x | cond x]
@@ -57,8 +57,7 @@ mergeOnSortedHeads f ((x : xs) : ys) =
       | otherwise = (b : bs) : burry (a : as) bss
     burry a b = a : b -- one of them is []
 
-bestFirstSearchSortedChildren ::
-  Ord n => Producer [] (a, n) -> [a]
-bestFirstSearchSortedChildren =
-  map fst . search id (mergeOnSortedHeads snd)
-
+bestFirstSearchSortedChildrenOn ::
+  Ord o => (a -> o) -> Producer [] a -> [a]
+bestFirstSearchSortedChildrenOn =
+  search id . mergeOnSortedHeads
