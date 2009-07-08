@@ -38,6 +38,11 @@ mmerge m =
 empty :: Monad m => Producer m v
 empty = Producer id
 
+
+
+-- Consumer (same module, so that we don't have to expose Producer
+-- decomposing capabilities)
+
 newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (ConsProducer m v)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
@@ -81,8 +86,7 @@ next =
 processRest :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
 processRest process =
   ConsumerT $ do
-  mRest <- get
-  let rest = fromMaybe emptyConsP mRest
-  putNoProducer
-  return $ evalConsumerTConsP process rest
-
+    mRest <- get
+    let rest = fromMaybe emptyConsP mRest
+    putNoProducer
+    return $ evalConsumerTConsP process rest

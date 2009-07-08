@@ -7,25 +7,26 @@ module Control.Generator.List (
 
 import Control.Generator (
   Producer, evalConsumerT, next, processRest)
+import Control.Generator.Instances ()
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
 import Data.Function (fix)
 import Data.List (transpose)
 
-search :: (a -> b) -> ([[b]] -> [b]) -> Producer [] a -> [b]
-search trans merge prod =
+search :: ([[a]] -> [a]) -> Producer [] a -> [a]
+search merge prod =
   merge . (`evalConsumerT` prod) . fix $ \rest -> do
     mx <- next
     case mx of
       Nothing -> lift []
       Just x ->
-        liftM ((trans x :) . merge) $ processRest rest
+        liftM ((x :) . merge) $ processRest rest
 
 dfs :: Producer [] a -> [a]
-dfs = search id concat
+dfs = search concat
 
 bfsLayers :: Producer [] a -> [[a]]
-bfsLayers = search return (map concat . transpose)
+bfsLayers = search (map concat . transpose) . fmap return
 
 bfs :: Producer [] a -> [a]
 bfs = concat . bfsLayers
@@ -40,7 +41,7 @@ mergeOn f =
     merge2 xs ys = xs ++ ys
 
 bestFirstSearchOn :: Ord o => (a -> o) -> Producer [] a -> [a]
-bestFirstSearchOn = search id . mergeOn
+bestFirstSearchOn = search . mergeOn
 
 prune :: (a -> Bool) -> a -> [a]
 prune cond x = [x | cond x]
@@ -60,4 +61,4 @@ mergeOnSortedHeads f ((x : xs) : ys) =
 bestFirstSearchSortedChildrenOn ::
   Ord o => (a -> o) -> Producer [] a -> [a]
 bestFirstSearchSortedChildrenOn =
-  search id . mergeOnSortedHeads
+  search . mergeOnSortedHeads
