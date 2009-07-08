@@ -22,7 +22,7 @@ instance Monad m => Applicative (ProducerT v m) where
 instance Monad m => Monad (ProducerT v m) where
   return = ProducerT . return
   ProducerT a >>= f = ProducerT $ a >>= unProducerT . f
-  fail = ProducerT . fail
+  fail = lift . fail
 
 instance MonadTrans (ProducerT v) where
   lift m = ProducerT . Cont $ \k -> mmerge . liftM k $ m
