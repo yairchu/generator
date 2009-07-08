@@ -3,7 +3,7 @@
 module Control.Generator.Memo (memo) where
 
 import Control.Concurrent.MVar (newMVar, putMVar, takeMVar)
-import Control.Generator (Producer, mmerge)
+import Control.Generator.Producer (Producer, joinP)
 import Control.Generator.Tools (transformProdMonad)
 import Control.Monad (liftM)
 import Control.Monad.Trans (MonadIO(..))
@@ -18,6 +18,6 @@ memoIO action = do
 
 memo :: MonadIO m => Producer m v -> IO (Producer m v)
 memo =
-  liftM mmerge . memoIO .
+  liftM joinP . memoIO .
   transformProdMonad (liftIO . memoIO)
 

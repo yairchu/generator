@@ -1,6 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
-import Control.Generator (ConsumerT, empty, evalConsumerT, Producer, next)
+import Control.Generator.Consumer (ConsumerT, evalConsumerT, next)
+import Control.Generator.Producer (Producer, empty)
 import Control.Generator.Memo (memo)
 import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
 import Control.Generator.Tools (execute, imap, itake, toList, izip, liftProdMonad)

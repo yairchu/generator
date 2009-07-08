@@ -8,9 +8,11 @@ module Control.Generator.Tools(
   liftProdMonad, toList, transformProdMonad
   ) where
 
-import Control.Generator (
-  ConsumerT, Producer, append, cons, empty,
-  evalConsumerT, mmerge, next, processRest, singleItem)
+import Control.Generator.Consumer (
+  ConsumerT, evalConsumerT, next, processRest)
+import Control.Generator.Producer (
+  append, cons, empty)
+import Control.Generator.Producer (Producer, joinP)
 import Control.Generator.ProducerT (ProducerT, produce, yield)
 import Control.Monad (forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
@@ -47,15 +49,15 @@ ifoldr consFunc nilFunc =
       Nothing -> lift nilFunc
       Just x -> lift . consFunc x =<< processRest rest
 
--- for operations that build Producers, combine step with the mmerge etc boiler-plate
+-- for operations that build Producers, combine step with the joinP etc boiler-plate
 ifoldr' :: Monad m => (b -> Producer m a -> Producer m a) -> Producer m a -> Producer m b -> Producer m a
 ifoldr' consFunc start =
-  mmerge . ifoldr step (return start)
+  joinP . ifoldr step (return start)
   where
-    step x = return . consFunc x . mmerge
+    step x = return . consFunc x . joinP
 
 singleItemM :: Monad m => m a -> Producer m a
-singleItemM = mmerge . liftM singleItem
+singleItemM = joinP . liftM (`cons` empty)
 
 consM :: Monad m => m a -> Producer m a -> Producer m a
 consM = append . singleItemM
@@ -75,9 +77,9 @@ toList =
 -- used in ifilter and iTakeWhile
 ifilterStep :: Monad m => (a -> m Bool) -> (Producer m a -> Producer m a) -> a -> Producer m a -> Producer m a
 ifilterStep cond onFalse x xs =
-  mmerge $ do
-  b <- cond x
-  return $ if b then cons x xs else onFalse xs
+  joinP $ do
+    b <- cond x
+    return $ if b then cons x xs else onFalse xs
 
 ifilter :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
 ifilter cond =
@@ -98,14 +100,14 @@ ilength = ifoldl' (const . return . (+ 1))  0
 
 itake :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
 itake count =
-  mmerge . evalConsumerT (foldr r (return empty) [1..count])
+  joinP . evalConsumerT (foldr r (return empty) [1..count])
   where
     r _ rest = do
       mx <- next
       case mx of
         Nothing -> return empty
         Just x ->
-          return . cons x . mmerge =<< processRest rest
+          liftM (cons x . joinP) $ processRest rest
 
 maybeForever :: Monad m => MaybeT m a -> m ()
 maybeForever = (>> return ()) . runMaybeT . forever
@@ -125,13 +127,13 @@ transformProdMonad trans =
     case mx of
       Nothing -> return empty
       Just x ->
-        liftM (cons x . mmerge) $
+        liftM (cons x . joinP) $
         lift . trans =<< processRest rest
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
   Producer m a -> Producer (t m) a
-liftProdMonad = mmerge . lift . transformProdMonad (return . lift)
+liftProdMonad = joinP . lift . transformProdMonad (return . lift)
 
 consumeLift ::
   (Monad (t m), Monad m, MonadTrans t) =>

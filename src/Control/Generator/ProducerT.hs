@@ -4,7 +4,7 @@ module Control.Generator.ProducerT (
   ProducerT, produce, yield, yields
   ) where
 
-import Control.Generator (Producer, append, cons, empty, mmerge)
+import Control.Generator.Producer (Producer, append, cons, empty, joinP)
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
 import Control.Monad.Cont (Cont (..))
@@ -25,7 +25,7 @@ instance Monad m => Monad (ProducerT v m) where
   fail = lift . fail
 
 instance MonadTrans (ProducerT v) where
-  lift m = ProducerT . Cont $ \k -> mmerge . liftM k $ m
+  lift m = ProducerT . Cont $ \k -> joinP $ liftM k m
 
 instance MonadIO m => MonadIO (ProducerT v m) where
   liftIO = lift . liftIO

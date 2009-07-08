@@ -5,8 +5,9 @@ module Control.Generator.List (
   prune, bestFirstSearchSortedChildrenOn
   ) where
 
-import Control.Generator (
-  Producer, evalConsumerT, next, processRest)
+import Control.Generator.Consumer (
+  evalConsumerT, next, processRest)
+import Control.Generator.Producer (Producer)
 import Control.Generator.Instances ()
 import Control.Monad (liftM)
 import Control.Monad.Trans (lift)
@@ -44,19 +45,19 @@ bestFirstSearchOn :: Ord o => (a -> o) -> Producer [] a -> [a]
 bestFirstSearchOn = search . mergeOn
 
 prune :: (a -> Bool) -> a -> [a]
-prune cond x = [x | cond x]
+prune cond = filter cond . return
 
 mergeOnSortedHeads :: Ord b => (a -> b) -> [[a]] -> [a]
 mergeOnSortedHeads _ [] = []
 mergeOnSortedHeads f ([] : xs) = mergeOnSortedHeads f xs
 mergeOnSortedHeads f ((x : xs) : ys) =
-  x : mergeOnSortedHeads f (burry xs ys)
+  x : mergeOnSortedHeads f (bury xs ys)
   where
-    burry a ([] : b) = burry a b
-    burry (a : as) ((b : bs) : bss)
+    bury a ([] : b) = bury a b
+    bury (a : as) ((b : bs) : bss)
       | f a <= f b = (a : as) : (b : bs) : bss
-      | otherwise = (b : bs) : burry (a : as) bss
-    burry a b = a : b -- one of them is []
+      | otherwise = (b : bs) : bury (a : as) bss
+    bury a b = a : b -- one of them is []
 
 bestFirstSearchSortedChildrenOn ::
   Ord o => (a -> o) -> Producer [] a -> [a]

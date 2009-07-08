@@ -12,10 +12,12 @@ Library
   hs-Source-Dirs:      src
   Extensions:
   Build-Depends:       base, haskell98, mtl, MaybeT
-  Exposed-modules:     Control.Generator,
+  Exposed-modules:     Control.Generator.Consumer,
+                       Control.Generator.Producer,
                        Control.Generator.Instances
                        Control.Generator.List,
                        Control.Generator.Memo,
                        Control.Generator.ProducerT,
                        Control.Generator.Tools
+  Other-Modules:       Control.Generator.Internal
   ghc-options:         -Wall
