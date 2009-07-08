@@ -2,7 +2,7 @@
 {-# LANGUAGE Rank2Types #-}
 
 module Control.Generator.Tools(
-  execute, fromList, iconcat,
+  consumeLift, execute, fromList, iconcat,
   ifoldl, ifoldl', ifoldr, ifoldr', ilast, ilength, imap,
   ifilter, iscanl, itake, iTakeWhile, izip, izipWith, izipP2,
   liftProdMonad, toList, transformProdMonad
