@@ -4,7 +4,7 @@ import Control.Generator.Consumer (ConsumerT, evalConsumerT, next)
 import Control.Generator.Producer (Producer, empty)
 import Control.Generator.Memo (memo)
 import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
-import Control.Generator.Tools (execute, imap, itake, toList, izip, liftProdMonad)
+import Control.Generator.Tools (execute, mapP, takeP, toList, zipP, liftProdMonad)
 import Control.Monad (forever, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
@@ -63,7 +63,7 @@ lineSpace :: IO ()
 lineSpace = putStrLn ""
 
 printProducer :: Show a => Producer IO a -> IO ()
-printProducer = execute . imap print
+printProducer = execute . mapP print
 
 permute :: [a] -> Producer [] a
 permute [] = empty
@@ -86,11 +86,11 @@ main :: IO ()
 main =
   mapM_ (>> lineSpace)
        [printProducer intProducer
-       ,printProducer . itake (2::Int) $ intProducer
+       ,printProducer . takeP (2::Int) $ intProducer
        ,evalConsumerT testConsumer intProducer
        ,evalConsumerT (evalConsumerT testConsumer2 . liftProdMonad $ strProducer) intProducer
-       ,execute . imap print . itake (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
-       ,printProducer . izip strProducer $ intProducer
+       ,execute . mapP print . takeP (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
+       ,printProducer . zipP strProducer $ intProducer
        ,print . toList $ permute "abc"
        ,memoTest
        ]

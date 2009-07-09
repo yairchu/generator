@@ -2,9 +2,9 @@
 {-# LANGUAGE Rank2Types #-}
 
 module Control.Generator.Tools(
-  consumeLift, execute, fromList, iconcat,
-  ifoldl, ifoldl', ifoldr, ifoldr', ilast, ilength, imap,
-  ifilter, iscanl, itake, iTakeWhile, izip, izipWith, izipP2,
+  consumeLift, execute, fromList, concatP,
+  foldlP, foldlP', foldrP, foldrP', lastP, lengthP, mapP,
+  filterP, scanlP, takeP, takeWhileP, zipP, zipWithP,
   liftProdMonad, toList, transformProdMonad
   ) where
 
@@ -13,7 +13,7 @@ import Control.Generator.Consumer (
 import Control.Generator.Producer (
   append, cons, empty)
 import Control.Generator.Producer (Producer, joinP)
-import Control.Generator.ProducerT (ProducerT, produce, yield)
+import Control.Generator.ProducerT (produce, yield)
 import Control.Monad (forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (StateT(..), evalStateT, get, put)
@@ -23,8 +23,8 @@ import Data.Function (fix)
 -- naming: for everything that's in prelude I add an "i" prefix,
 -- for convenient importing
 
-ifoldl :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
-ifoldl func startVal =
+foldlP :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
+foldlP func startVal =
   evalConsumerT $ r startVal =<< next
   where
     r s Nothing = return s
@@ -32,17 +32,17 @@ ifoldl func startVal =
       x <- lift (func s v)
       r x =<< next
 
-ifoldl' :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
-ifoldl' step =
-  ifoldl step'
+foldlP' :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
+foldlP' step =
+  foldlP step'
   where
     step' a b = do
       x <- step a b
       x `seq` return x
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
-ifoldr :: Monad m => (a -> m b -> m b) -> m b -> Producer m a -> m b
-ifoldr consFunc nilFunc =
+foldrP :: Monad m => (a -> m b -> m b) -> m b -> Producer m a -> m b
+foldrP consFunc nilFunc =
   evalConsumerT . fix $ \rest -> do
     mx <- next
     case mx of
@@ -50,9 +50,9 @@ ifoldr consFunc nilFunc =
       Just x -> lift . consFunc x =<< processRest rest
 
 -- for operations that build Producers, combine step with the joinP etc boiler-plate
-ifoldr' :: Monad m => (b -> Producer m a -> Producer m a) -> Producer m a -> Producer m b -> Producer m a
-ifoldr' consFunc start =
-  joinP . ifoldr step (return start)
+foldrP' :: Monad m => (b -> Producer m a -> Producer m a) -> Producer m a -> Producer m b -> Producer m a
+foldrP' consFunc start =
+  joinP . foldrP step (return start)
   where
     step x = return . consFunc x . joinP
 
@@ -62,44 +62,44 @@ singleItemM = joinP . liftM (`cons` empty)
 consM :: Monad m => m a -> Producer m a -> Producer m a
 consM = append . singleItemM
 
-imap :: Monad m => (a -> m b) -> Producer m a -> Producer m b
-imap func = ifoldr' (consM . func) empty
+mapP :: Monad m => (a -> m b) -> Producer m a -> Producer m b
+mapP func = foldrP' (consM . func) empty
 
 execute :: Monad m => Producer m a -> m ()
-execute = ifoldl' (const . return) ()
+execute = foldlP' (const . return) ()
 
 toList :: (Monad m) => Producer m a -> m [a]
 toList =
-  ifoldr step $ return []
+  foldrP step $ return []
   where
     step x = (return . (x :) =<<)
 
--- used in ifilter and iTakeWhile
-ifilterStep :: Monad m => (a -> m Bool) -> (Producer m a -> Producer m a) -> a -> Producer m a -> Producer m a
-ifilterStep cond onFalse x xs =
+-- used in filterP and takeWhileP
+filterStepP :: Monad m => (a -> m Bool) -> (Producer m a -> Producer m a) -> a -> Producer m a -> Producer m a
+filterStepP cond onFalse x xs =
   joinP $ do
     b <- cond x
     return $ if b then cons x xs else onFalse xs
 
-ifilter :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
-ifilter cond =
-  ifoldr' (ifilterStep cond id) empty
+filterP :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
+filterP cond =
+  foldrP' (filterStepP cond id) empty
 
-iTakeWhile :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
-iTakeWhile cond =
-  ifoldr' (ifilterStep cond (const empty)) empty
+takeWhileP :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
+takeWhileP cond =
+  foldrP' (filterStepP cond (const empty)) empty
 
 fromList :: (Monad m) => [a] -> Producer m a
 fromList = foldr cons empty
 
-iconcat :: Monad m => Producer m (Producer m a) -> Producer m a
-iconcat = ifoldr' append empty
+concatP :: Monad m => Producer m (Producer m a) -> Producer m a
+concatP = foldrP' append empty
 
-ilength :: (Monad m, Integral i) => Producer m a -> m i
-ilength = ifoldl' (const . return . (+ 1))  0
+lengthP :: (Monad m, Integral i) => Producer m a -> m i
+lengthP = foldlP' (const . return . (+ 1))  0
 
-itake :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
-itake count =
+takeP :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
+takeP count =
   joinP . evalConsumerT (foldr r (return empty) [1..count])
   where
     r _ rest = do
@@ -112,8 +112,8 @@ itake count =
 maybeForever :: Monad m => MaybeT m a -> m ()
 maybeForever = (>> return ()) . runMaybeT . forever
 
-ilast :: Monad m => Producer m a -> m a
-ilast =
+lastP :: Monad m => Producer m a -> m a
+lastP =
   evalConsumerT .
   liftM snd .
   (`runStateT` undefined) .
@@ -140,25 +140,18 @@ consumeLift ::
   ConsumerT a (t m) b -> Producer m a -> t m b
 consumeLift consumer = evalConsumerT consumer . liftProdMonad
 
-izipP2 :: (Monad m) =>
-          Producer m a
-       -> Producer m b
-       -> ConsumerT b (ConsumerT a (ProducerT r m)) ()
-       -> Producer m r
-izipP2 p1 p2 =
-  produce . (`consumeLift` p1) . (`consumeLift` liftProdMonad p2)
-
-izip :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
-izip p1 p2 =
-  izipP2 p1 p2 . maybeForever $
+zipP :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
+zipP p1 p2 =
+  produce . (`consumeLift` p1) . (`consumeLift` liftProdMonad p2) .
+  maybeForever $
   liftM2 (,) (MaybeT (lift next)) (MaybeT next) >>=
   lift . lift . lift . yield
 
-izipWith :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
-izipWith f p = imap (uncurry f) . izip p
+zipWithP :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
+zipWithP f p = mapP (uncurry f) . zipP p
 
-iscanl :: Monad m => (a -> b -> m a) -> a -> Producer m b -> Producer m a
-iscanl func start =
+scanlP :: Monad m => (a -> b -> m a) -> a -> Producer m b -> Producer m a
+scanlP func start =
   produce . consumeLift (evalStateT r start)
   where
     r =
