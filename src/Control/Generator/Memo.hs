@@ -1,10 +1,12 @@
 {-# OPTIONS -O2 -Wall #-}
 
+-- | Memoize 'Producer's of IO so that their results will be saved and later consumptions will not execute the IO actions required to generate the values.
+
 module Control.Generator.Memo (memo) where
 
 import Control.Concurrent.MVar (newMVar, putMVar, takeMVar)
 import Control.Generator.Producer (Producer, joinP)
-import Control.Generator.Tools (transformProdMonad)
+import Control.Generator.Folds (transformProdMonad)
 import Control.Monad (liftM)
 import Control.Monad.Trans (MonadIO(..))
 
@@ -16,6 +18,7 @@ memoIO action = do
     liftIO . putMVar ref $ Just x
     return x
 
+-- | Memoize a 'Producer IO'
 memo :: MonadIO m => Producer m v -> IO (Producer m v)
 memo =
   liftM joinP . memoIO .

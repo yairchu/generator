@@ -8,8 +8,8 @@ module Control.Generator.List (
   ) where
 
 import Control.Generator.Producer (Producer)
+import Control.Generator.Folds (mapMP, foldrP)
 import Control.Generator.Instances ()
-import Control.Generator.Tools (mapMP, foldrP)
 import Data.List (transpose)
 
 search :: ([[a]] -> [a]) -> Producer [] a -> [a]

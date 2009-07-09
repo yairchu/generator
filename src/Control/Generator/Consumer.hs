@@ -14,6 +14,7 @@ import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.Maybe (fromMaybe, isNothing)
 
+-- | A monad tranformer for consuming 'Producer's. To consume a 'Producer m a' one needs to use a 'ConsumerT a m' monad.
 newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (ConsProducer m v)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
@@ -34,6 +35,7 @@ evalConsumerTConsP ::
   Monad m => ConsumerT v m a -> ConsProducer m v -> m a
 evalConsumerTConsP (ConsumerT i) = evalStateT i . Just
 
+-- | Consume a 'Producer' with a 'ConsumerT'
 evalConsumerT :: Monad m => ConsumerT v m a -> Producer m v -> m a
 evalConsumerT i (Producer prod) = evalConsumerTConsP i $ prod emptyConsP
 
@@ -41,6 +43,7 @@ evalConsumerT i (Producer prod) = evalConsumerTConsP i $ prod emptyConsP
 putNoProducer :: Monad m => StateT (Maybe (ConsProducer m v)) m ()
 putNoProducer = put Nothing
 
+-- | Consume next value
 next :: Monad m => ConsumerT v m (Maybe v)
 next =
   ConsumerT . runMaybeT $ do
@@ -54,6 +57,8 @@ next =
   where
     putProducer = put . Just
 
+-- | Return an instance of the underlying monad that will use the given 'ConsumerT' to consume the remaining values.
+-- After this action there are no more items to consume (they belong to the given ConsumerT now)
 consumeRestM :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
 consumeRestM consume =
   ConsumerT $ do
@@ -61,3 +66,4 @@ consumeRestM consume =
     let rest = fromMaybe emptyConsP mRest
     putNoProducer
     return $ evalConsumerTConsP consume rest
+

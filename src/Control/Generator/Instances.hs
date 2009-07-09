@@ -4,7 +4,7 @@
 module Control.Generator.Instances () where
 
 import Control.Generator.Producer (Producer, empty, append)
-import Control.Generator.Tools (mapMP)
+import Control.Generator.Folds (mapMP)
 import Data.Monoid (Monoid(..))
 
 instance Monad m => Monoid (Producer m a) where

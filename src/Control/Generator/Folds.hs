@@ -1,11 +1,14 @@
 {-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE Rank2Types #-}
 
-module Control.Generator.Tools (
-  consumeLift, execute, fromList, concatP,
-  foldlP, foldlMP, foldlP', foldrP, foldrP', lastP, lengthP, mapMP,
-  filterP, scanlP, takeP, takeWhileP, zipP, zipWithMP,
-  liftProdMonad, toList, transformProdMonad
+-- | Fold `Producer`s
+module Control.Generator.Folds (
+  foldlP, foldrP, filterP, scanlP,
+  takeWhileP, lastP, lengthP, takeP,
+  fromList, toList, execute,
+  zipP, zipWithMP,
+  foldlMP, foldlP', mapMP,
+  liftProdMonad, transformProdMonad, consumeLift
   ) where
 
 import Control.Generator.Consumer (
@@ -16,10 +19,11 @@ import Control.Generator.Producer (Producer, joinP)
 import Control.Generator.ProducerT (produce, yield)
 import Control.Monad (forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
-import Control.Monad.State (StateT(..), evalStateT, get, put)
+import Control.Monad.State (evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.Function (fix)
 
+-- | Left-fold for 'Producer' with function returning a monadic action holding the result.
 foldlMP :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
 foldlMP func startVal =
   evalConsumerT $ r startVal
@@ -30,12 +34,14 @@ foldlMP func startVal =
         Nothing -> return s
         Just v -> r =<< lift (func s v)
 
+-- | Left-fold for 'Producer'
 foldlP :: Monad m => (a -> b -> a) -> a -> Producer m b -> m a
 foldlP func =
   foldlMP func'
   where
     func' x = return . func x
 
+-- | Left-fold for 'Producer' which reduces intermediate values to WHNF (weak head normal form).
 foldlP' :: Monad m => (a -> b -> a) -> a -> Producer m b -> m a
 foldlP' func startVal =
   evalConsumerT $ r startVal
@@ -46,7 +52,8 @@ foldlP' func startVal =
         Nothing -> return s
         Just v -> r $ func s v
 
--- consFunc takes "m b" and not "b" so could avoid running the rest
+-- | Right-fold for 'Producer'.
+-- The "cons" function gets a monadic action holding the right result so it could choose to avoid its execution.
 foldrP :: Monad m => (a -> m b -> m b) -> m b -> Producer m a -> m b
 foldrP consFunc nilFunc =
   evalConsumerT . fix $ \rest -> do
@@ -68,12 +75,16 @@ singleItemM = joinP . liftM (`cons` empty)
 consM :: Monad m => m a -> Producer m a -> Producer m a
 consM = append . singleItemM
 
+-- | Map with a function that returns a monadic action holding the result.
+-- For a non-monadic variant use 'fmap'
 mapMP :: Monad m => (a -> m b) -> Producer m a -> Producer m b
 mapMP func = foldrP' (consM . func) empty
 
+-- | Execute all the monadic actions of a 'Producer'
 execute :: Monad m => Producer m a -> m ()
 execute = foldlP' const ()
 
+-- | Transform a 'Producer' to a list, executing its monadic actions in the process.
 toList :: (Monad m) => Producer m a -> m [a]
 toList =
   foldrP step $ return []
@@ -87,23 +98,26 @@ filterStepP cond onFalse x xs =
     b <- cond x
     return $ if b then cons x xs else onFalse xs
 
+-- | Filter a 'Producer'
 filterP :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
 filterP cond =
   foldrP' (filterStepP cond id) empty
 
+-- | Take values from the 'Producer' while a condition is satisfied
 takeWhileP :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
 takeWhileP cond =
   foldrP' (filterStepP cond (const empty)) empty
 
+-- | Create a 'Producer' from a list of values.
+-- The resulting producer will not have any monadic effects.
 fromList :: (Monad m) => [a] -> Producer m a
 fromList = foldr cons empty
 
-concatP :: Monad m => Producer m (Producer m a) -> Producer m a
-concatP = foldrP' append empty
-
+-- | Execute a 'Producer's monadic actions and return its length
 lengthP :: (Monad m, Integral i) => Producer m a -> m i
 lengthP = foldlP' (const . (+ 1))  0
 
+-- | Take the first N elements from a 'Producer'
 takeP :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
 takeP count =
   joinP . evalConsumerT (foldr r (return empty) [1..count])
@@ -118,13 +132,12 @@ takeP count =
 maybeForever :: Monad m => MaybeT m a -> m ()
 maybeForever = (>> return ()) . runMaybeT . forever
 
+-- | Execute a 'Producer' and return its last value.
+-- Especially useful for getting the leafs of a tree represented by a 'Producer []'
 lastP :: Monad m => Producer m a -> m a
-lastP =
-  evalConsumerT .
-  liftM snd .
-  (`runStateT` undefined) .
-  maybeForever $ MaybeT (lift next) >>= put
+lastP = foldlP' (const id) undefined
 
+-- | Transform the monad of a 'Producer' given a function to transform the monad.
 transformProdMonad :: (Monad m, Monad s) =>
   (forall a. m a -> m (s a)) -> Producer m v -> m (Producer s v)
 transformProdMonad trans =
@@ -136,6 +149,7 @@ transformProdMonad trans =
         liftM (cons x . joinP) $
         lift . trans =<< consumeRestM rest
 
+-- | Lift the monad of a 'Producer'
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
   Producer m a -> Producer (t m) a
@@ -146,6 +160,8 @@ consumeLift ::
   ConsumerT a (t m) b -> Producer m a -> t m b
 consumeLift consumer = evalConsumerT consumer . liftProdMonad
 
+-- | Zip two 'Producer's.
+-- Also "zips"/interlaces their monadic effects.
 zipP :: Monad m => Producer m a -> Producer m b -> Producer m (a, b)
 zipP p1 p2 =
   produce . (`consumeLift` p1) . (`consumeLift` liftProdMonad p2) .
@@ -153,9 +169,11 @@ zipP p1 p2 =
   liftM2 (,) (MaybeT (lift next)) (MaybeT next) >>=
   lift . lift . lift . yield
 
+-- | Zip two 'Producer's and transform their values.
 zipWithMP :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
 zipWithMP f p = mapMP (uncurry f) . zipP p
 
+-- | scanl for 'Producer'
 scanlP :: Monad m => (a -> b -> a) -> a -> Producer m b -> Producer m a
 scanlP func start =
   produce . consumeLift (evalStateT r start)

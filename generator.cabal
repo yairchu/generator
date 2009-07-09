@@ -14,10 +14,10 @@ Library
   Build-Depends:       base, haskell98, mtl, MaybeT
   Exposed-modules:     Control.Generator.Consumer,
                        Control.Generator.Producer,
+                       Control.Generator.Folds,
                        Control.Generator.Instances
                        Control.Generator.List,
                        Control.Generator.Memo,
-                       Control.Generator.ProducerT,
-                       Control.Generator.Tools
+                       Control.Generator.ProducerT
   Other-Modules:       Control.Generator.Internal
   ghc-options:         -Wall
