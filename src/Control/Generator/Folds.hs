@@ -7,7 +7,7 @@ module Control.Generator.Folds (
   takeWhileP, lastP, lengthP, takeP,
   fromList, toList, execute,
   zipP, zipWithMP,
-  foldlMP, foldlP', mapMP,
+  foldlMP, foldlP', foldrP', mapMP,
   liftProdMonad, transformProdMonad, consumeLift
   ) where
 
@@ -62,7 +62,7 @@ foldrP consFunc nilFunc =
       Nothing -> lift nilFunc
       Just x -> lift . consFunc x =<< consumeRestM rest
 
--- for operations that build Producers, combine step with the joinP etc boiler-plate
+-- | Right-fold for making a 'Producer' from a 'Producer'
 foldrP' :: Monad m => (b -> Producer m a -> Producer m a) -> Producer m a -> Producer m b -> Producer m a
 foldrP' consFunc start =
   joinP . foldrP step (return start)
