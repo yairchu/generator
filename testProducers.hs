@@ -83,6 +83,13 @@ memoTest = do
   printProducer prod
   printProducer prod
 
+transTest :: Producer IO ()
+transTest = do
+  i <- intProducer
+  lift . putStrLn $ "A: " ++ show i
+  s <- strProducer
+  lift . putStrLn $ "B: " ++ show i ++ " " ++ s
+
 main :: IO ()
 main =
   mapM_ (>> lineSpace)
@@ -94,5 +101,6 @@ main =
        ,printProducer . zipP strProducer $ intProducer
        ,print . toList $ permute "abc"
        ,memoTest
+       ,execute transTest
        ]
 
