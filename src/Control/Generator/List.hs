@@ -5,23 +5,16 @@ module Control.Generator.List (
   prune, bestFirstSearchSortedChildrenOn
   ) where
 
-import Control.Generator.Consumer (
-  evalConsumerT, next, consumeRestM)
 import Control.Generator.Producer (Producer)
 import Control.Generator.Instances ()
-import Control.Monad (liftM)
-import Control.Monad.Trans (lift)
-import Data.Function (fix)
+import Control.Generator.Tools (foldrP)
 import Data.List (transpose)
 
 search :: ([[a]] -> [a]) -> Producer [] a -> [a]
-search merge prod =
-  merge . (`evalConsumerT` prod) . fix $ \rest -> do
-    mx <- next
-    case mx of
-      Nothing -> lift []
-      Just x ->
-        liftM ((x :) . merge) $ consumeRestM rest
+search merge =
+  merge . foldrP step []
+  where
+    step a = return . (a :) . merge
 
 dfs :: Producer [] a -> [a]
 dfs = search concat
