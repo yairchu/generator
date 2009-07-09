@@ -1,5 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
+-- | A monad transformer for the creation of 'Producer's.
+-- Similar to Python's generators.
+
 module Control.Generator.ProducerT (
   ProducerT, produce, yield, yields
   ) where
@@ -30,11 +33,15 @@ instance MonadTrans (ProducerT v) where
 instance MonadIO m => MonadIO (ProducerT v m) where
   liftIO = lift . liftIO
 
+-- | /O(1)/, Transform a ProducerT to a 'Producer'
+produce :: Monad m => ProducerT v m () -> Producer m v
+produce = ($ const empty) . runCont . unProducerT
+
+-- | /O(1)/, Output a result value
 yield :: Monad m => v -> ProducerT v m ()
 yield x = ProducerT . Cont $ cons x . ($ ())
 
+-- | /O(1)/, Output all the values of another 'Producer'.
 yields :: Monad m => Producer m v -> ProducerT v m ()
 yields xs = ProducerT . Cont $ append xs . ($ ())
 
-produce :: Monad m => ProducerT v m () -> Producer m v
-produce = ($ const empty) . runCont . unProducerT

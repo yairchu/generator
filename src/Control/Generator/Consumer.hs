@@ -1,5 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
+-- | Consumption of 'Producer's.
+-- All consumption of Producers is done using 'evalConsumerT'
+
 module Control.Generator.Consumer (
   ConsumerT, evalConsumerT, next, consumeRestM
   ) where
