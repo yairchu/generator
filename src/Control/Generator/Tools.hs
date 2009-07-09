@@ -9,7 +9,7 @@ module Control.Generator.Tools(
   ) where
 
 import Control.Generator.Consumer (
-  ConsumerT, evalConsumerT, next, processRest)
+  ConsumerT, evalConsumerT, next, consumeRestM)
 import Control.Generator.Producer (
   append, cons, empty)
 import Control.Generator.Producer (Producer, joinP)
@@ -47,7 +47,7 @@ foldrP consFunc nilFunc =
     mx <- next
     case mx of
       Nothing -> lift nilFunc
-      Just x -> lift . consFunc x =<< processRest rest
+      Just x -> lift . consFunc x =<< consumeRestM rest
 
 -- for operations that build Producers, combine step with the joinP etc boiler-plate
 foldrP' :: Monad m => (b -> Producer m a -> Producer m a) -> Producer m a -> Producer m b -> Producer m a
@@ -107,7 +107,7 @@ takeP count =
       case mx of
         Nothing -> return empty
         Just x ->
-          liftM (cons x . joinP) $ processRest rest
+          liftM (cons x . joinP) $ consumeRestM rest
 
 maybeForever :: Monad m => MaybeT m a -> m ()
 maybeForever = (>> return ()) . runMaybeT . forever
@@ -128,7 +128,7 @@ transformProdMonad trans =
       Nothing -> return empty
       Just x ->
         liftM (cons x . joinP) $
-        lift . trans =<< processRest rest
+        lift . trans =<< consumeRestM rest
 
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>

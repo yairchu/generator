@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Control.Generator.Consumer (
-  ConsumerT, evalConsumerT, next, processRest
+  ConsumerT, evalConsumerT, next, consumeRestM
   ) where
 
 import Control.Generator.Internal (ConsProducer(..), Producer(..))
@@ -51,10 +51,10 @@ next =
   where
     putProducer = put . Just
 
-processRest :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
-processRest process =
+consumeRestM :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
+consumeRestM consume =
   ConsumerT $ do
     mRest <- get
     let rest = fromMaybe emptyConsP mRest
     putNoProducer
-    return $ evalConsumerTConsP process rest
+    return $ evalConsumerTConsP consume rest

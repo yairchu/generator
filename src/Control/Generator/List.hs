@@ -6,7 +6,7 @@ module Control.Generator.List (
   ) where
 
 import Control.Generator.Consumer (
-  evalConsumerT, next, processRest)
+  evalConsumerT, next, consumeRestM)
 import Control.Generator.Producer (Producer)
 import Control.Generator.Instances ()
 import Control.Monad (liftM)
@@ -21,7 +21,7 @@ search merge prod =
     case mx of
       Nothing -> lift []
       Just x ->
-        liftM ((x :) . merge) $ processRest rest
+        liftM ((x :) . merge) $ consumeRestM rest
 
 dfs :: Producer [] a -> [a]
 dfs = search concat
