@@ -1,9 +1,9 @@
 {-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE Rank2Types #-}
 
-module Control.Generator.Tools(
+module Control.Generator.Tools (
   consumeLift, execute, fromList, concatP,
-  foldlP, foldlP', foldrP, foldrP', lastP, lengthP, mapMP,
+  foldlP, foldlMP, foldlP', foldrP, foldrP', lastP, lengthP, mapMP,
   filterP, scanlP, takeP, takeWhileP, zipP, zipWithMP,
   liftProdMonad, toList, transformProdMonad
   ) where
@@ -20,15 +20,21 @@ import Control.Monad.State (StateT(..), evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.Function (fix)
 
-foldlP :: Monad m => (a -> b -> a) -> a -> Producer m b -> m a
-foldlP func startVal =
+foldlMP :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
+foldlMP func startVal =
   evalConsumerT $ r startVal
   where
     r s = do
       x <- next
       case x of
         Nothing -> return s
-        Just v -> r $ func s v
+        Just v -> r =<< lift (func s v)
+
+foldlP :: Monad m => (a -> b -> a) -> a -> Producer m b -> m a
+foldlP func =
+  foldlMP func'
+  where
+    func' x = return . func x
 
 foldlP' :: Monad m => (a -> b -> a) -> a -> Producer m b -> m a
 foldlP' func startVal =
