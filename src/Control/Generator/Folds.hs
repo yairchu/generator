@@ -90,19 +90,18 @@ toList =
     step x = (return . (x :) =<<)
 
 -- used in filterP and takeWhileP
-filterStepP :: Monad m => (a -> m Bool) -> (Producer m a -> Producer m a) -> a -> Producer m a -> Producer m a
-filterStepP cond onFalse x xs =
-  joinP $ do
-    b <- cond x
-    return $ if b then cons x xs else onFalse xs
+filterStepP :: Monad m => (a -> Bool) -> (Producer m a -> Producer m a) -> a -> Producer m a -> Producer m a
+filterStepP cond onFalse x xs
+  | cond x = cons x xs
+  | otherwise = onFalse xs
 
 -- | Filter a 'Producer'
-filterP :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
+filterP :: Monad m => (a -> Bool) -> Producer m a -> Producer m a
 filterP cond =
   foldrP' (filterStepP cond id) empty
 
 -- | Take values from the 'Producer' while a condition is satisfied
-takeWhileP :: Monad m => (a -> m Bool) -> Producer m a -> Producer m a
+takeWhileP :: Monad m => (a -> Bool) -> Producer m a -> Producer m a
 takeWhileP cond =
   foldrP' (filterStepP cond (const empty)) empty
 
