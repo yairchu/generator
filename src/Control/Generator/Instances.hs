@@ -4,9 +4,11 @@
 -- | Monoid, Functor, Monad, and MonadPlus instances for Producer
 module Control.Generator.Instances () where
 
-import Control.Generator.Producer (Producer, cons, empty, append)
+import Control.Generator.Producer (
+  Producer, cons, consM, empty, append)
 import Control.Generator.Folds (foldrP', mapMP)
 import Control.Monad (MonadPlus(..))
+import Control.Monad.Trans (MonadTrans(..))
 import Data.Monoid (Monoid(..))
 
 instance Monad m => Monoid (Producer m a) where
@@ -23,4 +25,7 @@ instance Monad m => Monad (Producer m) where
 instance Monad m => MonadPlus (Producer m) where
   mzero = mempty
   mplus = mappend
+
+instance MonadTrans Producer where
+  lift = (`consM` empty)
 

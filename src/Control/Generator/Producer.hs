@@ -6,10 +6,11 @@
 -- and can only consume the values in the correct order,
 -- it's iteration executes the interleaved monadic actions.
 module Control.Generator.Producer (
-  Producer, append, empty, cons, joinP
+  Producer, append, empty, cons, consM, joinP
   ) where
 
 import Control.Generator.Internal (ConsProducer(..), Producer(..))
+import Control.Monad (liftM)
 
 -- | An empty producer
 empty :: Monad m => Producer m v
@@ -33,4 +34,11 @@ joinP m =
   Producer $ \rest -> ConsProducer $ do
   a <- m
   unConsProducer $ unProducer a rest
+
+singleItemM :: Monad m => m a -> Producer m a
+singleItemM = joinP . liftM (`cons` empty)
+
+-- | /O(1)/, Prepend a single element returned by a monadic action to a producer
+consM :: Monad m => m a -> Producer m a -> Producer m a
+consM = append . singleItemM
 

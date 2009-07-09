@@ -13,8 +13,7 @@ module Control.Generator.Folds (
 
 import Control.Generator.Consumer (
   ConsumerT, evalConsumerT, next, consumeRestM)
-import Control.Generator.Producer (
-  append, cons, empty)
+import Control.Generator.Producer (cons, consM, empty)
 import Control.Generator.Producer (Producer, joinP)
 import Control.Generator.ProducerT (produce, yield)
 import Control.Monad (forever, liftM, liftM2)
@@ -68,12 +67,6 @@ foldrP' consFunc start =
   joinP . foldrP step (return start)
   where
     step x = return . consFunc x . joinP
-
-singleItemM :: Monad m => m a -> Producer m a
-singleItemM = joinP . liftM (`cons` empty)
-
-consM :: Monad m => m a -> Producer m a -> Producer m a
-consM = append . singleItemM
 
 -- | Map with a function that returns a monadic action holding the result.
 -- For a non-monadic variant use 'fmap'
