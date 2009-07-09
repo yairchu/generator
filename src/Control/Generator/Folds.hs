@@ -3,10 +3,15 @@
 
 -- | Fold `Producer`s
 module Control.Generator.Folds (
+  -- | Classic folds
   foldlP, foldrP, filterP, scanlP,
-  takeWhileP, lastP, lengthP, takeP,
+  takeWhileP,
+  -- | List-like operations
+  lastP, lengthP, takeP,
   fromList, toList, execute,
+  -- | Zips
   zipP, zipWithMP,
+  -- | Esoteric folds
   foldlMP, foldlP', foldrP', mapMP,
   liftProdMonad, transformProdMonad, consumeLift
   ) where
