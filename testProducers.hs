@@ -2,9 +2,10 @@
 
 import Control.Generator.Consumer (ConsumerT, evalConsumerT, next)
 import Control.Generator.Producer (Producer, empty)
+import Control.Generator.Instances ()
+import Control.Generator.Folds (execute, takeP, toList, zipP, liftProdMonad)
 import Control.Generator.Memo (memo)
 import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
-import Control.Generator.Tools (execute, mapP, takeP, toList, zipP, liftProdMonad)
 import Control.Monad (forever, mapM_)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
@@ -63,7 +64,7 @@ lineSpace :: IO ()
 lineSpace = putStrLn ""
 
 printProducer :: Show a => Producer IO a -> IO ()
-printProducer = execute . mapP print
+printProducer = execute . fmap print
 
 permute :: [a] -> Producer [] a
 permute [] = empty
@@ -89,7 +90,7 @@ main =
        ,printProducer . takeP (2::Int) $ intProducer
        ,evalConsumerT testConsumer intProducer
        ,evalConsumerT (evalConsumerT testConsumer2 . liftProdMonad $ strProducer) intProducer
-       ,execute . mapP print . takeP (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
+       ,execute . fmap print . takeP (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
        ,printProducer . zipP strProducer $ intProducer
        ,print . toList $ permute "abc"
        ,memoTest
