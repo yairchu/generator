@@ -3,8 +3,8 @@
 
 module Control.Generator.Tools(
   consumeLift, execute, fromList, concatP,
-  foldlP, foldlP', foldrP, foldrP', lastP, lengthP, mapP,
-  filterP, scanlP, takeP, takeWhileP, zipP, zipWithP,
+  foldlP, foldlP', foldrP, foldrP', lastP, lengthP, mapMP,
+  filterP, scanlP, takeP, takeWhileP, zipP, zipWithMP,
   liftProdMonad, toList, transformProdMonad
   ) where
 
@@ -20,25 +20,25 @@ import Control.Monad.State (StateT(..), evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.Function (fix)
 
--- naming: for everything that's in prelude I add an "i" prefix,
--- for convenient importing
-
-foldlP :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
+foldlP :: Monad m => (a -> b -> a) -> a -> Producer m b -> m a
 foldlP func startVal =
-  evalConsumerT $ r startVal =<< next
+  evalConsumerT $ r startVal
   where
-    r s Nothing = return s
-    r s (Just v) = do
-      x <- lift (func s v)
-      r x =<< next
+    r s = do
+      x <- next
+      case x of
+        Nothing -> return s
+        Just v -> r $ func s v
 
-foldlP' :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
-foldlP' step =
-  foldlP step'
+foldlP' :: Monad m => (a -> b -> a) -> a -> Producer m b -> m a
+foldlP' func startVal =
+  evalConsumerT $ r startVal
   where
-    step' a b = do
-      x <- step a b
-      x `seq` return x
+    r s = do
+      x <- s `seq` next
+      case x of
+        Nothing -> return s
+        Just v -> r $ func s v
 
 -- consFunc takes "m b" and not "b" so could avoid running the rest
 foldrP :: Monad m => (a -> m b -> m b) -> m b -> Producer m a -> m b
@@ -62,11 +62,11 @@ singleItemM = joinP . liftM (`cons` empty)
 consM :: Monad m => m a -> Producer m a -> Producer m a
 consM = append . singleItemM
 
-mapP :: Monad m => (a -> m b) -> Producer m a -> Producer m b
-mapP func = foldrP' (consM . func) empty
+mapMP :: Monad m => (a -> m b) -> Producer m a -> Producer m b
+mapMP func = foldrP' (consM . func) empty
 
 execute :: Monad m => Producer m a -> m ()
-execute = foldlP' (const . return) ()
+execute = foldlP' const ()
 
 toList :: (Monad m) => Producer m a -> m [a]
 toList =
@@ -96,7 +96,7 @@ concatP :: Monad m => Producer m (Producer m a) -> Producer m a
 concatP = foldrP' append empty
 
 lengthP :: (Monad m, Integral i) => Producer m a -> m i
-lengthP = foldlP' (const . return . (+ 1))  0
+lengthP = foldlP' (const . (+ 1))  0
 
 takeP :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
 takeP count =
@@ -147,10 +147,10 @@ zipP p1 p2 =
   liftM2 (,) (MaybeT (lift next)) (MaybeT next) >>=
   lift . lift . lift . yield
 
-zipWithP :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
-zipWithP f p = mapP (uncurry f) . zipP p
+zipWithMP :: Monad m => (a -> b -> m c) -> Producer m a -> Producer m b -> Producer m c
+zipWithMP f p = mapMP (uncurry f) . zipP p
 
-scanlP :: Monad m => (a -> b -> m a) -> a -> Producer m b -> Producer m a
+scanlP :: Monad m => (a -> b -> a) -> a -> Producer m b -> Producer m a
 scanlP func start =
   produce . consumeLift (evalStateT r start)
   where
@@ -159,5 +159,5 @@ scanlP func start =
       s <- get
       lift . lift . lift $ yield s
       x <- MaybeT $ lift next
-      put =<< (lift . lift . lift . lift) (func s x)
+      put $ func s x
 

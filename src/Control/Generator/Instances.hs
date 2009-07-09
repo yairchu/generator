@@ -4,7 +4,7 @@
 module Control.Generator.Instances () where
 
 import Control.Generator.Producer (Producer, empty, append)
-import Control.Generator.Tools (mapP)
+import Control.Generator.Tools (mapMP)
 import Data.Monoid (Monoid(..))
 
 instance Monad m => Monoid (Producer m a) where
@@ -12,4 +12,4 @@ instance Monad m => Monoid (Producer m a) where
   mappend = append
 
 instance Monad m => Functor (Producer m) where
-  fmap = mapP . (return .)
+  fmap = mapMP . (return .)
