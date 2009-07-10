@@ -18,7 +18,7 @@ import Control.Monad.State.Class (MonadState(..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.List.Class (
   BaseList(..), FoldList(..), List(..), ListItem(..),
-  cons, fromList, listFoldrL, toList)
+  fromList, listFoldrL, toList)
 import Data.Monoid (Monoid(..))
 
 -- runListT' called this way because am implementing mtl's runListT
@@ -31,6 +31,11 @@ foldrL' consFunc nilFunc =
   ListT . foldrL step (runListT' nilFunc)
   where
     step x = runListT' . consFunc x . ListT
+
+-- like generic cons except using that one
+-- would cause an infinite loop
+cons :: Monad m => a -> ListT m a -> ListT m a
+cons x = ListT . return . Cons x
 
 instance Monad m => Monoid (ListT m a) where
   mempty = ListT $ return Nil
@@ -52,7 +57,7 @@ instance Monad m => MonadPlus (ListT m) where
   mplus = mappend
 
 instance MonadTrans ListT where
-  lift = ListT . (>> return Nil)
+  lift = ListT . liftM (`Cons` mempty)
 
 instance Monad m => BaseList (ListT m) m where
   joinL = ListT . (>>= runListT')
