@@ -6,14 +6,18 @@ module Data.List.Class (
   -- | List operations for MonadPlus
   cons, fromList, filter,
   -- | Standard list operations for FoldList instances
-  takeWhile, toList,
+  takeWhile, genericLength,
   -- | Standard list operations for List instances
-  scanl, genericDrop, genericTake, genericLength,
+  scanl, genericDrop, genericTake,
+  -- | Non standard FoldList operations
+  foldlL, execute, toList,
   -- | Non standard List operations
-  foldlL, listFoldrL, splitAtL, execute
+  splitAtL,
+  -- | For implementing FoldList instances from List
+  listFoldrL
   ) where
 
-import Control.Monad (MonadPlus(..), liftM)
+import Control.Monad (MonadPlus(..), ap, join, liftM)
 import Control.Monad.Identity (Identity(..))
 import Data.Foldable (Foldable, foldl')
 import Prelude hiding (filter, takeWhile, scanl)
@@ -69,11 +73,15 @@ listFoldrL consFunc nilFunc =
   where
     step x = consFunc x . listFoldrL consFunc nilFunc
 
-foldlL :: List l m => (a -> b -> a) -> a -> l b -> m a
+foldlL :: FoldList l m => (a -> b -> a) -> a -> l b -> m a
 foldlL step startVal =
-  fold' step' $ return startVal
+  join . (`ap` return (return startVal)) . foldrL astep (return id)
   where
-    step' = foldlL step . step startVal
+    astep x rest =
+      return $ \s ->
+        join $ (`ap` bstep s x) rest
+    bstep ma b =
+      liftM (return . (`step` b)) ma
 
 scanl :: List l m => (a -> b -> a) -> a -> l b -> l a
 scanl step startVal =
@@ -112,7 +120,7 @@ toList =
   where
     step = liftM . (:)
 
-genericLength :: (Integral i, List l m) => l a -> m i
+genericLength :: (Integral i, FoldList l m) => l a -> m i
 genericLength = foldlL (const . (+ 1)) 0
 
 execute :: FoldList l m => l a -> m ()

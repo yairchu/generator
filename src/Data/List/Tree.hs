@@ -41,7 +41,7 @@ bfsLayers = search (liftM join . transpose) . liftM return
 bfs :: (FoldList l k, FoldList k m, List k m) => l a -> k a
 bfs = join . bfsLayers
 
-mergeOn :: (Ord b, List l m, List k m) => (a -> b) -> l (k a) -> k a
+mergeOn :: (Ord b, FoldList l m, List k m) => (a -> b) -> l (k a) -> k a
 mergeOn f =
   joinL . foldlL merge2 mzero
   where
@@ -59,7 +59,7 @@ mergeOn f =
 
 -- | Best First Search given a scoring function.
 bestFirstSearchOn ::
-  (Ord b, List l k, FoldList l k, List k m) => (a -> b) -> l a -> k a
+  (Ord b, List l k, List k m, FoldList l k, FoldList k m) => (a -> b) -> l a -> k a
 bestFirstSearchOn = search . mergeOn
 
 mergeOnSortedHeads ::
