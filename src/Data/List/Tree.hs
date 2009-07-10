@@ -8,23 +8,23 @@ module Data.List.Tree (
   bestFirstSearchSortedChildrenOn
   ) where
 
-import Control.Monad (liftM)
+import Control.Monad (MonadPlus(..), join, liftM)
 import Data.List (transpose)
-import Data.List.Class (FoldList(..))
+import Data.List.Class (FoldList(..), cons)
 
-search :: FoldList l [] => ([[a]] -> [a]) -> l a -> [a]
+search :: (FoldList l m, MonadPlus m) => (m (m a) -> m a) -> l a -> m a
 search merge =
-  merge . foldrL step []
+  merge . foldrL step mzero
   where
-    step a = return . (a :) . merge
+    step a = return . cons a . merge
 
 -- | Flatten a tree in DFS pre-order. (Depth First Search)
-dfs :: FoldList l [] => l a -> [a]
-dfs = search concat
+dfs :: (FoldList l m, MonadPlus m) => l a -> m a
+dfs = search join
 
 -- | Transform a tree into lists of the items in its different layers
 bfsLayers :: FoldList l [] => l a -> [[a]]
-bfsLayers = search (map concat . transpose) . liftM return
+bfsLayers = search (fmap join . transpose) . liftM return
 
 -- | Flatten a tree in BFS order. (Breadth First Search)
 bfs :: FoldList l [] => l a -> [a]
