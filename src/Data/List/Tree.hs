@@ -62,12 +62,21 @@ bestFirstSearchOn ::
   (Ord b, List l k, FoldList l k, List k m) => (a -> b) -> l a -> k a
 bestFirstSearchOn = search . mergeOn
 
-mergeOnSortedHeads :: Ord b => (a -> b) -> [[a]] -> [a]
-mergeOnSortedHeads _ [] = []
-mergeOnSortedHeads f ([] : xs) = mergeOnSortedHeads f xs
-mergeOnSortedHeads f ((x : xs) : ys) =
-  x : mergeOnSortedHeads f (bury xs ys)
+mergeOnSortedHeads ::
+  Ord b => (a -> b) -> [[a]] -> [a]
+mergeOnSortedHeads f list =
+  joinL $ do
+    item <- unCons list
+    case item of
+      Nil -> return mzero
+      Cons xx yys -> do
+        xi <- unCons xx
+        return $ case xi of
+          Nil -> mergeOnSortedHeads f yys
+          Cons x xs ->
+            cons x . mergeOnSortedHeads f $ bury xs yys
   where
+    -- need to translate this part
     bury a ([] : b) = bury a b
     bury (a : as) ((b : bs) : bss)
       | f a <= f b = (a : as) : (b : bs) : bss
