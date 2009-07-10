@@ -6,9 +6,9 @@ module Data.List.Class (
   -- | List operations for MonadPlus
   cons, fromList, filter,
   -- | Standard list operations for FoldList instances
-  takeWhile, genericLength,
+  takeWhile, genericLength, scanl,
   -- | Standard list operations for List instances
-  scanl, genericDrop, genericTake,
+  genericDrop, genericTake,
   -- | Non standard FoldList operations
   foldlL, execute, toList,
   -- | Non standard List operations
@@ -79,15 +79,18 @@ foldlL step startVal =
   where
     astep x rest =
       return $ \s ->
-        join $ (`ap` bstep s x) rest
+      join $ (`ap` bstep s x) rest
     bstep ma b =
       liftM (return . (`step` b)) ma
 
-scanl :: List l m => (a -> b -> a) -> a -> l b -> l a
+scanl :: FoldList l m => (a -> b -> a) -> a -> l b -> l a
 scanl step startVal =
-  cons startVal . joinL . fold' step' (return mzero)
+  joinL . (`ap` return startVal) . foldrL astep (return (const mzero))
   where
-    step' x = return . scanl step (step startVal x)
+    astep x rest =
+      return $ \s ->
+      cons s . joinL $ (`ap` bstep s x) rest
+    bstep a b = return $ step a b
 
 takeWhile :: FoldList l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
