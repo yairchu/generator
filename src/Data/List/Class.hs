@@ -66,22 +66,26 @@ listFoldrL consFunc nilFunc list = do
     Nil -> nilFunc
     Cons x xs -> consFunc x $ listFoldrL consFunc nilFunc xs
 
+-- for foldlL and scanl
+foldlL' :: FoldList l m =>
+  (a -> m c -> c) -> (a -> c) -> (a -> b -> a) -> a -> l b -> c
+foldlL' process end step startVal =
+  t startVal . foldrL astep (return end)
+  where
+    astep x rest = return $ (`t` rest) . (`step` x)
+    t cur = process cur . (`ap` return cur)
+
 foldlL :: FoldList l m => (a -> b -> a) -> a -> l b -> m a
 foldlL step startVal =
-  join . (`ap` return (return startVal)) . foldrL astep (return id)
+  foldlL' (const join) id astep (return startVal)
   where
-    astep x rest =
-      return $ \s ->
-      join $ (`ap` bstep s x) rest
-    bstep ma b =
-      liftM (return . (`step` b)) ma
+    astep rest x = liftM (`step` x) rest
 
 scanl :: FoldList l m => (a -> b -> a) -> a -> l b -> l a
-scanl step startVal =
-  t startVal . foldrL astep (return (const mzero))
+scanl =
+  foldlL' t $ const mzero
   where
-    astep x rest = return $ \s -> t (step s x) rest
-    t cur = cons cur . joinL . (`ap` return cur)
+    t cur = cons cur . joinL
 
 takeWhile :: FoldList l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
