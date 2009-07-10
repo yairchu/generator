@@ -19,7 +19,7 @@ module Control.Generator.Folds (
 import Control.Generator.Consumer (
   ConsumerT, evalConsumerT, next, consumeRestM)
 import Control.Monad.Producer (Producer, cons, consM, empty, joinP)
-import Control.Generator.ProducerT (produce, yield)
+import Control.Monad.Generator (produce, yield)
 import Control.Monad (forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, put)

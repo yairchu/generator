@@ -3,7 +3,7 @@
 -- | A monad transformer for the creation of 'Producer's.
 -- Similar to Python's generators.
 
-module Control.Generator.ProducerT (
+module Control.Monad.Generator (
   ProducerT, produce, yield, yields
   ) where
 
