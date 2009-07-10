@@ -5,7 +5,6 @@ module Control.Monad.Consumer (
   ) where
 
 import Control.Monad (MonadPlus(..))
-import Control.Monad.ListT (ListT)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))

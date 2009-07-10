@@ -5,9 +5,11 @@ module Data.List.Class (
   BaseList(..), List (..), ListItem (..),
   -- | List operations for MonadPlus
   cons, fromList, filter,
-  -- | List operations for List instances
+  -- | Standard list operations for List instances
   takeWhile, toList,
-  foldrL, foldlL
+  genericDrop, genericTake,
+  -- | Non standard List operations
+  foldrL, foldlL, splitAtL
   ) where
 
 import Control.Monad (MonadPlus(..), liftM)
@@ -17,11 +19,11 @@ import Prelude hiding (filter, takeWhile)
 
 data ListItem l a = Nil | Cons a (l a)
 
-class (MonadPlus m, Monad i) => BaseList m i | m -> i where
-  joinL :: i (m b) -> m b
+class (MonadPlus l, Monad m) => BaseList l m | l -> m where
+  joinL :: m (l b) -> l b
 
-class BaseList m i => List m i | m -> i where
-  unCons :: m a -> i (ListItem m a)
+class BaseList l m => List l m | l -> m where
+  unCons :: l a -> m (ListItem l a)
 
 instance BaseList [] Identity where
   joinL = runIdentity
@@ -45,26 +47,26 @@ filter cond =
       | otherwise = mzero
 
 -- for foldrL and foldlL
-fold' :: List m i => (a -> m a -> i b) -> i b -> m a -> i b
+fold' :: List l m => (a -> l a -> m b) -> m b -> l a -> m b
 fold' step nilFunc list = do
   item <- unCons list
   case item of
     Nil -> nilFunc
     Cons x xs -> step x xs
 
-foldrL :: List m i => (a -> i b -> i b) -> i b -> m a -> i b
+foldrL :: List l m => (a -> m b -> m b) -> m b -> l a -> m b
 foldrL consFunc nilFunc = 
   fold' step nilFunc
   where
     step x = consFunc x . foldrL consFunc nilFunc
 
-foldlL :: List m i => (a -> b -> a) -> a -> m b -> i a
+foldlL :: List l m => (a -> b -> a) -> a -> l b -> m a
 foldlL step startVal =
   fold' step' $ return startVal
   where
     step' x = foldlL step $ step startVal x
 
-takeWhile :: List m i => (a -> Bool) -> m a -> m a
+takeWhile :: List l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
   joinL . foldrL step (return mzero)
   where
