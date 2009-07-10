@@ -8,7 +8,7 @@ module Data.List.Class (
   -- | Standard list operations for FoldList instances
   takeWhile, toList,
   -- | Standard list operations for List instances
-  genericDrop, genericTake, genericLength,
+  scanl, genericDrop, genericTake, genericLength,
   -- | Non standard List operations
   foldlL, listFoldrL, splitAtL, execute
   ) where
@@ -16,7 +16,7 @@ module Data.List.Class (
 import Control.Monad (MonadPlus(..), liftM)
 import Control.Monad.Identity (Identity(..))
 import Data.Foldable (Foldable, foldl')
-import Prelude hiding (filter, takeWhile)
+import Prelude hiding (filter, takeWhile, scanl)
 
 data ListItem l a =
   Nil |
@@ -74,6 +74,12 @@ foldlL step startVal =
   fold' step' $ return startVal
   where
     step' = foldlL step . step startVal
+
+scanl :: List l m => (a -> b -> a) -> a -> l b -> l a
+scanl step startVal =
+  cons startVal . joinL . fold' step' (return mzero)
+  where
+    step' x = return . scanl step (step startVal x)
 
 takeWhile :: FoldList l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
