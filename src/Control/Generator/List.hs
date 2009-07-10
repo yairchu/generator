@@ -4,29 +4,29 @@
 -- A 'Producer []' is a tree.
 module Control.Generator.List (
   dfs, bfs, bfsLayers, bestFirstSearchOn,
-  prune, bestFirstSearchSortedChildrenOn
+  bestFirstSearchSortedChildrenOn
   ) where
 
-import Control.Monad.Producer (Producer)
-import Control.Generator.Folds (mapMP, foldrP)
+import Control.Monad.ListT (ListT)
 import Data.List (transpose)
+import Data.List.Class (foldrL)
 
-search :: ([[a]] -> [a]) -> Producer [] a -> [a]
+search :: ([[a]] -> [a]) -> ListT [] a -> [a]
 search merge =
-  merge . foldrP step []
+  merge . foldrL step []
   where
     step a = return . (a :) . merge
 
 -- | Flatten a tree in DFS pre-order. (Depth First Search)
-dfs :: Producer [] a -> [a]
+dfs :: ListT [] a -> [a]
 dfs = search concat
 
 -- | Transform a tree into lists of the items in its different layers
-bfsLayers :: Producer [] a -> [[a]]
+bfsLayers :: ListT [] a -> [[a]]
 bfsLayers = search (map concat . transpose) . fmap return
 
 -- | Flatten a tree in BFS order. (Breadth First Search)
-bfs :: Producer [] a -> [a]
+bfs :: ListT [] a -> [a]
 bfs = concat . bfsLayers
 
 mergeOn :: Ord b => (a -> b) -> [[a]] -> [a]
@@ -39,7 +39,7 @@ mergeOn f =
     merge2 xs ys = xs ++ ys
 
 -- | Best First Search given a scoring function.
-bestFirstSearchOn :: Ord o => (a -> o) -> Producer [] a -> [a]
+bestFirstSearchOn :: Ord o => (a -> o) -> ListT [] a -> [a]
 bestFirstSearchOn = search . mergeOn
 
 mergeOnSortedHeads :: Ord b => (a -> b) -> [[a]] -> [a]
@@ -57,12 +57,7 @@ mergeOnSortedHeads f ((x : xs) : ys) =
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
 bestFirstSearchSortedChildrenOn ::
-  Ord o => (a -> o) -> Producer [] a -> [a]
+  Ord o => (a -> o) -> ListT [] a -> [a]
 bestFirstSearchSortedChildrenOn =
   search . mergeOnSortedHeads
-
--- | Prune all tree paths where an item does not satisfy a condition.
--- Unlike takeWhileP, which stops each path where the condition was first unsatisfied, `prune` eliminates the whole path.
-prune :: (a -> Bool) -> Producer [] a -> Producer [] a
-prune cond = mapMP (filter cond . return)
 

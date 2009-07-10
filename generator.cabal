@@ -16,9 +16,7 @@ Library
                        Control.Monad.Producer,
                        Control.Monad.Consumer,
                        Control.Monad.Generator,
-                       Control.Generator.Folds,
                        Control.Generator.List,
-                       Control.Generator.Memo,
                        Data.DList.Generic,
                        Data.List.Class
   ghc-options:         -Wall
