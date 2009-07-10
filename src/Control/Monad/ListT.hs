@@ -1,12 +1,12 @@
 module Control.Monad.ListT (
-  ListItem(..), ListT(..)
+  ListItem(..), ListT(..), cons
 ) where
 
-import Control.Monad (MonadPlus(..))
+import Control.Applicative (Applicative(..))
+import Control.Monad (MonadPlus(..), ap)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.Monoid (Monoid(..))
 
--- should list item replace prelude's ?
 data ListItem l a =
   Nil |
   Cons { headT :: a, tailT :: l a }
@@ -24,24 +24,19 @@ foldrL consFunc nilFunc list =
       Cons x xs -> 
         consFunc x $ foldrL consFunc nilFunc xs
 
--- for mappend, fmap
-foldrLI :: Monad m =>
-  (a -> ListT m b -> ListItem (ListT m) b) ->
-  ListT m b -> ListT m a -> ListT m b
-foldrLI consFunc =
-  foldrL step
-  where
-    step x = ListT . return . consFunc x
-
 instance Monad m => Monoid (ListT m a) where
   mempty = ListT $ return Nil
-  mappend = flip (foldrLI Cons)
+  mappend = flip (foldrL cons)
 
 instance Monad m => Functor (ListT m) where
-  fmap func = foldrLI (Cons . func) mempty
+  fmap func = foldrL (cons . func) mempty
+
+instance Monad m => Applicative (ListT m) where
+  pure = return
+  (<*>) = ap
 
 instance Monad m => Monad (ListT m) where
-  return x = ListT . return $ Cons x mempty
+  return = ListT . return . (`Cons` mempty)
   a >>= b = foldrL mappend mempty $ fmap b a
 
 instance Monad m => MonadPlus (ListT m) where
@@ -50,4 +45,7 @@ instance Monad m => MonadPlus (ListT m) where
 
 instance MonadTrans ListT where
   lift = ListT . (>> return Nil)
+
+cons :: MonadPlus m => a -> m a -> m a
+cons = mplus . return
 
