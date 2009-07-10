@@ -73,7 +73,7 @@ foldlL :: List l m => (a -> b -> a) -> a -> l b -> m a
 foldlL step startVal =
   fold' step' $ return startVal
   where
-    step' x = foldlL step $ step startVal x
+    step' = foldlL step . step startVal
 
 takeWhile :: FoldList l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
