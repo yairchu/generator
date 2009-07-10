@@ -5,11 +5,12 @@ module Data.List.Class (
   BaseList(..), FoldList(..), List (..), ListItem (..),
   -- | List operations for MonadPlus
   cons, fromList, filter,
-  -- | Standard list operations for List instances
+  -- | Standard list operations for FoldList instances
   takeWhile, toList,
-  genericDrop, genericTake,
+  -- | Standard list operations for List instances
+  genericDrop, genericTake, genericLength,
   -- | Non standard List operations
-  foldlL, listFoldrL, splitAtL
+  foldlL, listFoldrL, splitAtL, execute
   ) where
 
 import Control.Monad (MonadPlus(..), liftM)
@@ -99,4 +100,10 @@ toList =
   foldrL step $ return []
   where
     step = liftM . (:)
+
+genericLength :: (Integral i, List l m) => l a -> m i
+genericLength = foldlL (const . (+ 1)) 0
+
+execute :: FoldList l m => l a -> m ()
+execute = foldrL (const id) $ return ()
 
