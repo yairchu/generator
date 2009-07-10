@@ -17,7 +17,8 @@ import Control.Monad.Reader.Class (MonadReader(..))
 import Control.Monad.State.Class (MonadState(..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.List.Class (
-  BaseList(..), List(..), ListItem(..), cons, foldrL, fromList, toList)
+  BaseList(..), FoldList(..), List(..), ListItem(..),
+  cons, fromList, listFoldrL, toList)
 import Data.Monoid (Monoid(..))
 
 -- runListT' called this way because am implementing mtl's runListT
@@ -58,6 +59,9 @@ instance Monad m => BaseList (ListT m) m where
 
 instance Monad m => List (ListT m) m where
   unCons = runListT'
+
+instance Monad m => FoldList (ListT m) m where
+  foldrL = listFoldrL
 
 -- | Acronym for toList for compatability with mtl's ListT
 runListT :: Monad m => ListT m a -> m [a]

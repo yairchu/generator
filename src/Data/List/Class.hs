@@ -1,15 +1,15 @@
-{-# LANGUAGE FunctionalDependencies, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, UndecidableInstances #-}
 
 module Data.List.Class (
   -- | The List typeclass
-  BaseList(..), List (..), ListItem (..),
+  BaseList(..), FoldList(..), List (..), ListItem (..),
   -- | List operations for MonadPlus
   cons, fromList, filter,
   -- | Standard list operations for List instances
   takeWhile, toList,
   genericDrop, genericTake,
   -- | Non standard List operations
-  foldrL, foldlL, splitAtL
+  foldlL, listFoldrL, splitAtL
   ) where
 
 import Control.Monad (MonadPlus(..), liftM)
@@ -21,6 +21,9 @@ data ListItem l a = Nil | Cons a (l a)
 
 class (MonadPlus l, Monad m) => BaseList l m | l -> m where
   joinL :: m (l b) -> l b
+
+class BaseList l m => FoldList l m | l -> m where
+  foldrL :: (a -> m b -> m b) -> m b -> l a -> m b
 
 class BaseList l m => List l m | l -> m where
   unCons :: l a -> m (ListItem l a)
@@ -54,11 +57,11 @@ fold' step nilFunc list = do
     Nil -> nilFunc
     Cons x xs -> step x xs
 
-foldrL :: List l m => (a -> m b -> m b) -> m b -> l a -> m b
-foldrL consFunc nilFunc = 
+listFoldrL :: List l m => (a -> m b -> m b) -> m b -> l a -> m b
+listFoldrL consFunc nilFunc = 
   fold' step nilFunc
   where
-    step x = consFunc x . foldrL consFunc nilFunc
+    step x = consFunc x . listFoldrL consFunc nilFunc
 
 foldlL :: List l m => (a -> b -> a) -> a -> l b -> m a
 foldlL step startVal =
@@ -66,7 +69,7 @@ foldlL step startVal =
   where
     step' x = foldlL step $ step startVal x
 
-takeWhile :: List l m => (a -> Bool) -> l a -> l a
+takeWhile :: FoldList l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
   joinL . foldrL step (return mzero)
   where
@@ -91,7 +94,7 @@ genericDrop count = joinL . liftM snd . splitAtL count
 genericTake :: (Integral i, List l m) => i -> l a -> l a
 genericTake count = joinL . liftM fst . splitAtL count
 
-toList :: List m i => m a -> i [a]
+toList :: FoldList m i => m a -> i [a]
 toList =
   foldrL step $ return []
   where
