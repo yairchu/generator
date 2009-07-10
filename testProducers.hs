@@ -1,15 +1,14 @@
 {-# OPTIONS -O2 -Wall #-}
 
-import Control.Generator.Consumer (ConsumerT, evalConsumerT, next)
-import Control.Generator.Producer (Producer, empty)
-import Control.Generator.Instances ()
-import Control.Generator.Folds (execute, takeP, toList, zipP, liftProdMonad)
-import Control.Generator.Memo (memo)
-import Control.Generator.ProducerT (ProducerT, produce, yield, yields)
-import Control.Monad (forever, mapM_)
-import Control.Monad.Maybe (MaybeT(..))
-import Control.Monad.State (evalStateT, get, modify)
+import Control.Monad.ListT (ListT)
+import Control.Monad.Consumer (ConsumerT, next)
+import Control.Monad.Producer (Producer, consume)
+import Control.Monad.Generator (GeneratorT, produce, yield, yields)
+import Control.Monad ( {- forever, -} mapM_, mzero)
+--import Control.Monad.Maybe (MaybeT(..))
+--import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
+import Data.List.Class (fromList, execute, toList)
 
 intProducer :: Producer IO Int
 intProducer =
@@ -31,7 +30,7 @@ strProducer =
       yield "string2"
       lift . putStrLn $ "string producer is done!"
 
-testConsumer :: ConsumerT Int IO ()
+testConsumer :: ConsumerT Int (ListT IO) IO ()
 testConsumer = do
   lift . putStrLn $ "testConsumer starting"
   Just a <- next
@@ -41,7 +40,8 @@ testConsumer = do
 -- A complicated ConsumerT transformer stack should probably get a
 -- newtype with names for the various lifters... But for the example's
 -- sake, we keep fewer levels of indirection
-testConsumer2 :: ConsumerT String (ConsumerT Int IO) ()
+{-
+testConsumer2 :: ConsumerT String (Producer (ConsumerT Int (Producer IO) IO)) (ConsumerT Int (Producer IO) IO) ()
 testConsumer2 = do
   liftIO . putStrLn $ "testConsumer2 starting"
   Just s1 <- next
@@ -52,13 +52,16 @@ testConsumer2 = do
   Nothing <- next
   liftIO . putStrLn $ "read two int values whose sum is " ++ show (i1+i2)
   liftIO . putStrLn $ "read two str values whose concat is " ++ s1 ++ s2
+-}
 
-cumSum :: Monad m => ConsumerT Int (ProducerT Int m) ()
+{-
+cumSum :: Monad m => ConsumerT Int (GeneratorT Int m) ()
 cumSum = do
   runMaybeT . flip evalStateT 0 . forever $ do
     lift . lift . lift . yield =<< get
     modify . (+) =<< lift (MaybeT next)
   return ()
+-}
 
 lineSpace :: IO ()
 lineSpace = putStrLn ""
@@ -67,7 +70,7 @@ printProducer :: Show a => Producer IO a -> IO ()
 printProducer = execute . fmap print
 
 permute :: [a] -> Producer [] a
-permute [] = empty
+permute [] = mzero
 permute xs =
   produce $ do
   i <- lift [0 .. length xs - 1]
@@ -75,32 +78,23 @@ permute xs =
   yield x
   yields . permute $ pre ++ post
 
-memoTest :: IO ()
-memoTest = do
-  prod <- memo intProducer
-  putStrLn "going to consume"
-  printProducer prod
-  printProducer prod
-  printProducer prod
-
-transTest :: Producer IO ()
+transTest :: ListT IO ()
 transTest = do
-  i <- intProducer
-  lift . putStrLn $ "A: " ++ show i
-  s <- strProducer
-  lift . putStrLn $ "B: " ++ show i ++ " " ++ s
+  lift $ putStrLn "Hello"
+  lift $ putStrLn "World"
+  a <- fromList "ABC"
+  lift $ print a
 
 main :: IO ()
 main =
   mapM_ (>> lineSpace)
-       [printProducer intProducer
-       ,printProducer . takeP (2::Int) $ intProducer
-       ,evalConsumerT testConsumer intProducer
-       ,evalConsumerT (evalConsumerT testConsumer2 . liftProdMonad $ strProducer) intProducer
-       ,execute . fmap print . takeP (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
-       ,printProducer . zipP strProducer $ intProducer
+       [execute transTest
+       ,printProducer intProducer
+       --,printProducer . takeL (2::Int) $ intProducer
+       ,consume testConsumer intProducer
+       --,consume (consume testConsumer2 . liftProdMonad $ strProducer) intProducer
+       --,execute . fmap print . takeL (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
+       --,printProducer . zipP strProducer $ intProducer
        ,print . toList $ permute "abc"
-       ,memoTest
-       ,execute transTest
        ]
 
