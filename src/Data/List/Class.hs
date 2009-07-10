@@ -59,19 +59,12 @@ filter cond =
       | cond x = return x
       | otherwise = mzero
 
--- for foldrL and foldlL
-fold' :: List l m => (a -> l a -> m b) -> m b -> l a -> m b
-fold' step nilFunc list = do
+listFoldrL :: List l m => (a -> m b -> m b) -> m b -> l a -> m b
+listFoldrL consFunc nilFunc list = do
   item <- unCons list
   case item of
     Nil -> nilFunc
-    Cons x xs -> step x xs
-
-listFoldrL :: List l m => (a -> m b -> m b) -> m b -> l a -> m b
-listFoldrL consFunc nilFunc = 
-  fold' step nilFunc
-  where
-    step x = consFunc x . listFoldrL consFunc nilFunc
+    Cons x xs -> consFunc x $ listFoldrL consFunc nilFunc xs
 
 foldlL :: FoldList l m => (a -> b -> a) -> a -> l b -> m a
 foldlL step startVal =
