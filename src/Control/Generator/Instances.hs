@@ -4,9 +4,9 @@
 -- | Monoid, Functor, Monad, and MonadPlus instances for Producer
 module Control.Generator.Instances () where
 
-import Control.Generator.Producer (
-  Producer, cons, consM, empty, append)
 import Control.Generator.Folds (foldrP', mapMP)
+import Control.Monad.Producer (
+  Producer, cons, consM, empty, append)
 import Control.Monad (MonadPlus(..))
 import Control.Monad.Trans (MonadTrans(..))
 import Data.Monoid (Monoid(..))

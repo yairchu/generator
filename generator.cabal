@@ -13,8 +13,8 @@ Library
   Extensions:
   Build-Depends:       base, haskell98, mtl, MaybeT
   Exposed-modules:     Control.Monad.ListT,
+                       Control.Monad.Producer,
                        Control.Generator.Consumer,
-                       Control.Generator.Producer,
                        Control.Generator.Folds,
                        Control.Generator.Instances
                        Control.Generator.List,

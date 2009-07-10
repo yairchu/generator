@@ -7,7 +7,7 @@ module Control.Generator.List (
   prune, bestFirstSearchSortedChildrenOn
   ) where
 
-import Control.Generator.Producer (Producer)
+import Control.Monad.Producer (Producer)
 import Control.Generator.Folds (mapMP, foldrP)
 import Control.Generator.Instances ()
 import Data.List (transpose)

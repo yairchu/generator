@@ -7,10 +7,10 @@ module Control.Generator.ProducerT (
   ProducerT, produce, yield, yields
   ) where
 
-import Control.Generator.Producer (Producer, append, cons, empty, joinP)
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
 import Control.Monad.Cont (Cont (..))
+import Control.Monad.Producer (Producer, append, cons, empty, joinP)
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 
 newtype ProducerT v m a =

@@ -5,7 +5,7 @@
 module Control.Generator.Memo (memo) where
 
 import Control.Concurrent.MVar (newMVar, putMVar, takeMVar)
-import Control.Generator.Producer (Producer, joinP)
+import Control.Monad.Producer (Producer, joinP)
 import Control.Generator.Folds (transformProdMonad)
 import Control.Monad (liftM)
 import Control.Monad.Trans (MonadIO(..))

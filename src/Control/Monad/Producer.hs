@@ -5,7 +5,7 @@
 -- Only a 'ConsumerT' can get the values out of a 'Producer',
 -- and can only consume the values in the correct order,
 -- it's iteration executes the interleaved monadic actions.
-module Control.Generator.Producer (
+module Control.Monad.Producer (
   Producer, append, empty, cons, consM, joinP
   ) where
 
