@@ -85,7 +85,7 @@ foldlL step startVal =
 
 scanl :: FoldList l m => (a -> b -> a) -> a -> l b -> l a
 scanl step startVal =
-  joinL . (`ap` return startVal) . foldrL astep (return (const mzero))
+  joinL . (`ap` return startVal) . foldrL astep (return return)
   where
     astep x rest =
       return $ \s ->
