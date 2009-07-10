@@ -12,7 +12,8 @@ Library
   hs-Source-Dirs:      src
   Extensions:
   Build-Depends:       base, haskell98, mtl, MaybeT
-  Exposed-modules:     Control.Generator.Consumer,
+  Exposed-modules:     Control.Monad.ListT,
+                       Control.Generator.Consumer,
                        Control.Generator.Producer,
                        Control.Generator.Folds,
                        Control.Generator.Instances
