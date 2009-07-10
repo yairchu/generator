@@ -1,8 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
--- | Functions for flattening 'Producer's of the list monad.
--- A 'Producer []' is a tree.
-module Control.Generator.List (
+-- | Functions for flattening 'ListT's of the lists.
+-- A 'ListT []' is a tree.
+module Data.List.Tree (
   dfs, bfs, bfsLayers, bestFirstSearchOn,
   bestFirstSearchSortedChildrenOn
   ) where
