@@ -6,11 +6,11 @@ module Data.List.Class (
   -- | List operations for MonadPlus
   cons, fromList, filter,
   -- | List operations for List instances
-  takeWhile,
+  takeWhile, toList,
   foldrL, foldlL
   ) where
 
-import Control.Monad (MonadPlus(..))
+import Control.Monad (MonadPlus(..), liftM)
 import Control.Monad.Identity (Identity(..))
 import Data.Foldable (Foldable, foldl')
 import Prelude hiding (filter, takeWhile)
@@ -67,4 +67,10 @@ takeWhile cond =
     step x
       | cond x = return . cons x . joinL
       | otherwise = const $ return mzero
+
+toList :: List m i => m a -> i [a]
+toList =
+  foldrL step $ return []
+  where
+    step = liftM . (:)
 
