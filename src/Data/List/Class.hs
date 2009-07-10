@@ -1,9 +1,12 @@
 {-# LANGUAGE FunctionalDependencies, MultiParamTypeClasses #-}
 
 module Data.List.Class (
+  -- | The List typeclass
   List (..), ListItem (..),
-  filter, takeWhile,
-  cons, fromList,
+  -- | List operations for MonadPlus
+  cons, fromList, filter,
+  -- | List operations for List instances
+  takeWhile,
   foldrL, foldlL
   ) where
 
