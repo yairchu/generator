@@ -20,6 +20,7 @@ Library
                        Control.Generator.List,
                        Control.Generator.Memo,
                        Control.Generator.ProducerT
+                       Data.DList.Generic,
                        Data.List.Class
   Other-Modules:       Control.Generator.Internal
   ghc-options:         -Wall

@@ -38,13 +38,13 @@ instance Monad m => Monoid (ListT m a) where
 instance Monad m => Functor (ListT m) where
   fmap func = foldrL' (cons . func) mempty
 
-instance Monad m => Applicative (ListT m) where
-  pure = return
-  (<*>) = ap
-
 instance Monad m => Monad (ListT m) where
   return = ListT . return . (`Cons` mempty)
   a >>= b = foldrL' mappend mempty $ fmap b a
+
+instance Monad m => Applicative (ListT m) where
+  pure = return
+  (<*>) = ap
 
 instance Monad m => MonadPlus (ListT m) where
   mzero = mempty
@@ -72,9 +72,6 @@ mapListT f = joinL . liftM fromList . f . runListT
 
 instance MonadIO m => MonadIO (ListT m) where
   liftIO = lift . liftIO
-
--- ((a -> m b) -> m a) -> m a
--- ((a -> (b -> r) -> r) -> (a -> r) -> r) -> (a -> r) -> r
 
 {-
 -- TODO: understand and verify this instance :)
