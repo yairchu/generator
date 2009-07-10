@@ -16,8 +16,8 @@ module Control.Generator.Folds (
   liftProdMonad, transformProdMonad, consumeLift
   ) where
 
-import Control.Monad.Producer (
-  Producer, ConsumerT, consM, evalConsumerT, next, consumeRestM)
+import Control.Monad.Producer (Producer, consM, evalConsumerT)
+import Control.Monad.Consumer (ConsumerT, next, consumeRestM)
 import Control.Monad.Generator (produce, yield)
 import Control.Monad (MonadPlus(..), forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))

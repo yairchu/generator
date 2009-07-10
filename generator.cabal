@@ -14,6 +14,7 @@ Library
   Build-Depends:       base, haskell98, mtl, MaybeT
   Exposed-modules:     Control.Monad.ListT,
                        Control.Monad.Producer,
+                       Control.Monad.Consumer,
                        Control.Monad.Generator,
                        Control.Generator.Folds,
                        Control.Generator.List,
