@@ -5,10 +5,11 @@
 module Control.Generator.Memo (memo) where
 
 import Control.Concurrent.MVar (newMVar, putMVar, takeMVar)
-import Control.Monad.Producer (Producer, joinP)
+import Control.Monad.Producer (Producer)
 import Control.Generator.Folds (transformProdMonad)
 import Control.Monad (liftM)
 import Control.Monad.Trans (MonadIO(..))
+import Data.List.Class (joinL)
 
 memoIO :: MonadIO m => m a -> IO (m a)
 memoIO action = do
@@ -21,6 +22,6 @@ memoIO action = do
 -- | Memoize a 'Producer IO'
 memo :: MonadIO m => Producer m v -> IO (Producer m v)
 memo =
-  liftM joinP . memoIO .
+  liftM joinL . memoIO .
   transformProdMonad (liftIO . memoIO)
 

@@ -15,12 +15,9 @@ Library
   Exposed-modules:     Control.Monad.ListT,
                        Control.Monad.Producer,
                        Control.Monad.Generator,
-                       Control.Generator.Consumer,
                        Control.Generator.Folds,
-                       Control.Generator.Instances
                        Control.Generator.List,
                        Control.Generator.Memo,
                        Data.DList.Generic,
                        Data.List.Class
-  Other-Modules:       Control.Generator.Internal
   ghc-options:         -Wall

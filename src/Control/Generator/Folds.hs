@@ -16,15 +16,15 @@ module Control.Generator.Folds (
   liftProdMonad, transformProdMonad, consumeLift
   ) where
 
-import Control.Generator.Consumer (
-  ConsumerT, evalConsumerT, next, consumeRestM)
-import Control.Monad.Producer (Producer, cons, consM, empty, joinP)
+import Control.Monad.Producer (
+  Producer, ConsumerT, consM, evalConsumerT, next, consumeRestM)
 import Control.Monad.Generator (produce, yield)
-import Control.Monad (forever, liftM, liftM2)
+import Control.Monad (MonadPlus(..), forever, liftM, liftM2)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.Function (fix)
+import Data.List.Class (cons, joinL)
 
 -- | Left-fold for 'Producer' with function returning a monadic action holding the result.
 foldlMP :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
@@ -68,14 +68,14 @@ foldrP consFunc nilFunc =
 -- | Right-fold for making a 'Producer' from a 'Producer'
 foldrP' :: Monad m => (b -> Producer m a -> Producer m a) -> Producer m a -> Producer m b -> Producer m a
 foldrP' consFunc start =
-  joinP . foldrP step (return start)
+  joinL . foldrP step (return start)
   where
-    step x = return . consFunc x . joinP
+    step x = return . consFunc x . joinL
 
 -- | Map with a function that returns a monadic action holding the result.
 -- For a non-monadic variant use 'fmap'
 mapMP :: Monad m => (a -> m b) -> Producer m a -> Producer m b
-mapMP func = foldrP' (consM . func) empty
+mapMP func = foldrP' (consM . func) mzero
 
 -- | Execute all the monadic actions of a 'Producer'
 execute :: Monad m => Producer m a -> m ()
@@ -97,17 +97,17 @@ filterStepP cond onFalse x xs
 -- | Filter a 'Producer'
 filterP :: Monad m => (a -> Bool) -> Producer m a -> Producer m a
 filterP cond =
-  foldrP' (filterStepP cond id) empty
+  foldrP' (filterStepP cond id) mzero
 
 -- | Take values from the 'Producer' while a condition is satisfied
 takeWhileP :: Monad m => (a -> Bool) -> Producer m a -> Producer m a
 takeWhileP cond =
-  foldrP' (filterStepP cond (const empty)) empty
+  foldrP' (filterStepP cond (const mzero)) mzero
 
 -- | Create a 'Producer' from a list of values.
 -- The resulting producer will not have any monadic effects.
 fromList :: (Monad m) => [a] -> Producer m a
-fromList = foldr cons empty
+fromList = foldr cons mzero
 
 -- | Execute a 'Producer's monadic actions and return its length
 lengthP :: (Monad m, Integral i) => Producer m a -> m i
@@ -116,14 +116,14 @@ lengthP = foldlP' (const . (+ 1))  0
 -- | Take the first N elements from a 'Producer'
 takeP :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
 takeP count =
-  joinP . evalConsumerT (foldr r (return empty) [1..count])
+  joinL . evalConsumerT (foldr r (return mzero) [1..count])
   where
     r _ rest = do
       mx <- next
       case mx of
-        Nothing -> return empty
+        Nothing -> return mzero
         Just x ->
-          liftM (cons x . joinP) $ consumeRestM rest
+          liftM (cons x . joinL) $ consumeRestM rest
 
 maybeForever :: Monad m => MaybeT m a -> m ()
 maybeForever = (>> return ()) . runMaybeT . forever
@@ -140,16 +140,16 @@ transformProdMonad trans =
   evalConsumerT . fix $ \rest -> do
     mx <- next
     case mx of
-      Nothing -> return empty
+      Nothing -> return mzero
       Just x ->
-        liftM (cons x . joinP) $
+        liftM (cons x . joinL) $
         lift . trans =<< consumeRestM rest
 
 -- | Lift the monad of a 'Producer'
 liftProdMonad ::
   (Monad (t m), Monad m, MonadTrans t) =>
   Producer m a -> Producer (t m) a
-liftProdMonad = joinP . lift . transformProdMonad (return . lift)
+liftProdMonad = joinL . lift . transformProdMonad (return . lift)
 
 consumeLift ::
   (Monad (t m), Monad m, MonadTrans t) =>
