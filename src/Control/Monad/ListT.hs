@@ -1,10 +1,11 @@
 module Control.Monad.ListT (
-  ListItem(..), ListT(..), cons
+  ListItem(..), ListT(..), cons, fromList
 ) where
 
 import Control.Applicative (Applicative(..))
 import Control.Monad (MonadPlus(..), ap)
 import Control.Monad.Trans (MonadTrans(..))
+import Data.Foldable (Foldable, foldl')
 import Data.Monoid (Monoid(..))
 
 data ListItem l a =
@@ -48,4 +49,7 @@ instance MonadTrans ListT where
 
 cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return
+
+fromList :: (MonadPlus m, Foldable t) => t a -> m a
+fromList = foldl' (flip (mplus . return)) mzero
 
