@@ -18,7 +18,9 @@ import Control.Monad.Identity (Identity(..))
 import Data.Foldable (Foldable, foldl')
 import Prelude hiding (filter, takeWhile)
 
-data ListItem l a = Nil | Cons a (l a)
+data ListItem l a =
+  Nil |
+  Cons { headL :: a, tailL :: l a }
 
 class (MonadPlus l, Monad m) => BaseList l m | l -> m where
   joinL :: m (l b) -> l b
@@ -35,6 +37,9 @@ instance BaseList [] Identity where
 instance List [] Identity where
   unCons [] = Identity Nil
   unCons (x : xs) = Identity $ Cons x xs
+
+instance FoldList [] Identity where
+  foldrL = listFoldrL
 
 cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return

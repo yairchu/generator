@@ -9,8 +9,9 @@ module Data.List.Tree (
   ) where
 
 import Control.Monad (MonadPlus(..), join, liftM)
-import Data.List (transpose)
-import Data.List.Class (FoldList(..), cons)
+import Data.List.Class (
+  List(..), ListItem(..), FoldList(..),
+  cons, foldlL, fromList, joinL, toList)
 
 search :: (FoldList l m, MonadPlus m) => (m (m a) -> m a) -> l a -> m a
 search merge =
@@ -22,26 +23,43 @@ search merge =
 dfs :: (FoldList l m, MonadPlus m) => l a -> m a
 dfs = search join
 
+transpose :: (FoldList a m, List b m) => a (b v) -> a (b v)
+transpose matrix =
+  joinL $ toList matrix >>= r
+  where
+    r = liftM t . mapM unCons
+    t items =
+      cons (fromList (map headL items)) .
+      joinL . r $ map tailL items
+
 -- | Transform a tree into lists of the items in its different layers
-bfsLayers :: FoldList l [] => l a -> [[a]]
-bfsLayers = search (fmap join . transpose) . liftM return
+bfsLayers ::
+  (FoldList l k, FoldList k m, List k m) => l a -> k (k a)
+bfsLayers = search (liftM join . transpose) . liftM return
 
 -- | Flatten a tree in BFS order. (Breadth First Search)
-bfs :: FoldList l [] => l a -> [a]
-bfs = concat . bfsLayers
+bfs :: (FoldList l k, FoldList k m, List k m) => l a -> k a
+bfs = join . bfsLayers
 
-mergeOn :: Ord b => (a -> b) -> [[a]] -> [a]
+mergeOn :: (Ord b, List l m, List k m) => (a -> b) -> l (k a) -> k a
 mergeOn f =
-  foldl merge2 []
+  joinL . foldlL merge2 mzero
   where
-    merge2 (x:xs) (y:ys)
-      | f y > f x = x : merge2 xs (y:ys)
-      | otherwise = y : merge2 (x:xs) ys
-    merge2 xs ys = xs ++ ys
+    merge2 xx yy =
+      joinL $ do
+        xi <- unCons xx
+        yi <- unCons yy
+        return $ case (xi, yi) of
+          (Cons x xs, Cons y ys)
+            | f y > f x -> cons x . merge2 xs $ cons y ys
+            | otherwise -> cons y $ merge2 (cons x xs) ys
+          (x, y) -> mplus (t x) (t y)
+    t Nil = mzero
+    t (Cons x xs) = cons x xs
 
 -- | Best First Search given a scoring function.
 bestFirstSearchOn ::
-  (Ord o, FoldList l []) => (a -> o) -> l a -> [a]
+  (Ord b, List l k, FoldList l k, List k m) => (a -> b) -> l a -> k a
 bestFirstSearchOn = search . mergeOn
 
 mergeOnSortedHeads :: Ord b => (a -> b) -> [[a]] -> [a]
