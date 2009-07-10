@@ -29,6 +29,14 @@ cons = mplus . return
 fromList :: (MonadPlus m, Foldable t) => t a -> m a
 fromList = foldl' (flip (mplus . return)) mzero
 
+filter :: MonadPlus m => (a -> Bool) -> m a -> m a
+filter cond =
+  (>>= f)
+  where
+    f x
+      | cond x = return x
+      | otherwise = mzero
+
 -- for foldrL and foldlL
 fold' :: List m i => (a -> m a -> i b) -> i b -> m a -> i b
 fold' step nilFunc list = do
@@ -49,18 +57,11 @@ foldlL step startVal =
   where
     step' x = foldlL step $ step startVal x
 
--- for filter and takeWhile
-filter' :: List m i => (i (m a) -> i (m a)) -> (a -> Bool) -> m a -> m a
-filter' falseFunc cond =
+takeWhile :: List m i => (a -> Bool) -> m a -> m a
+takeWhile cond =
   joinL . foldrL step (return mzero)
   where
-    step x xs
-      | cond x = return . cons x $ joinL xs
-      | otherwise = falseFunc xs
-
-filter :: List m i => (a -> Bool) -> m a -> m a
-filter = filter' id
-
-takeWhile :: List m i => (a -> Bool) -> m a -> m a
-takeWhile = filter' . const $ return mzero
+    step x
+      | cond x = return . cons x . joinL
+      | otherwise = const $ return mzero
 
