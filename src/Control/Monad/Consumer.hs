@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Control.Monad.Consumer (
-  ConsumerT, evalConsumerTList, next, consumeRestM
+  ConsumerT, evalConsumerT, next, consumeRestM
   ) where
 
 import Control.Monad (MonadPlus(..))
@@ -12,13 +12,13 @@ import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.List.Class (ListItem(..), List(..))
 import Data.Maybe (fromMaybe)
 
--- | A monad tranformer for consuming 'Producer's. To consume a 'Producer m a' one needs to use a 'ConsumerT a m' monad.
-newtype ConsumerT v m a = ConsumerT { unConsumerT :: StateT (Maybe (ListT m v)) m a }
+-- | A monad tranformer for [partially] consuming 'ListT's.
+newtype ConsumerT v m a = ConsumerT { runConsumerT :: StateT (Maybe (ListT m v)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
   return = ConsumerT . return
   fail = ConsumerT . fail
-  (ConsumerT a) >>= b = ConsumerT $ a >>= unConsumerT . b
+  a >>= b = ConsumerT $ runConsumerT a >>= runConsumerT . b
 
 instance MonadTrans (ConsumerT v) where
   lift = ConsumerT . lift
@@ -26,9 +26,9 @@ instance MonadTrans (ConsumerT v) where
 instance MonadIO m => MonadIO (ConsumerT v m) where
   liftIO = lift . liftIO
 
-evalConsumerTList ::
+evalConsumerT ::
   Monad m => ConsumerT v m a -> ListT m v -> m a
-evalConsumerTList (ConsumerT i) = evalStateT i . Just
+evalConsumerT (ConsumerT i) = evalStateT i . Just
 
 -- Consumer no longer has a producer left...
 putNoProducer :: Monad m => StateT (Maybe (ListT m v)) m ()
@@ -58,6 +58,6 @@ consumeRestM consume =
     mRest <- get
     let rest = fromMaybe mzero mRest
     putNoProducer
-    return $ evalConsumerTList consume rest
+    return $ evalConsumerT consume rest
 
 

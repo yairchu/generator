@@ -7,11 +7,11 @@
 -- and can only consume the values in the correct order,
 -- it's iteration executes the interleaved monadic actions.
 module Control.Monad.Producer (
-  Producer, consM, evalConsumerT
+  Producer, consume, consM
   ) where
 
 import Control.Monad (MonadPlus(..), liftM)
-import Control.Monad.Consumer (ConsumerT, evalConsumerTList)
+import Control.Monad.Consumer (ConsumerT, evalConsumerT)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.DList.Generic (DList(..), toList)
@@ -49,6 +49,6 @@ consM action xs =
   joinL $ liftM (`cons` xs) action
 
 -- | Consume a 'Producer' with a 'ConsumerT'
-evalConsumerT :: Monad m => ConsumerT v m a -> Producer m v -> m a
-evalConsumerT consumer = evalConsumerTList consumer . toList . runProducer
+consume :: Monad m => ConsumerT v m a -> Producer m v -> m a
+consume consumer = evalConsumerT consumer . toList . runProducer
 

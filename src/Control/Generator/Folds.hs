@@ -16,7 +16,7 @@ module Control.Generator.Folds (
   liftProdMonad, transformProdMonad, consumeLift
   ) where
 
-import Control.Monad.Producer (Producer, consM, evalConsumerT)
+import Control.Monad.Producer (Producer, consM, consume)
 import Control.Monad.Consumer (ConsumerT, next, consumeRestM)
 import Control.Monad.Generator (produce, yield)
 import Control.Monad (MonadPlus(..), forever, liftM, liftM2)
@@ -29,7 +29,7 @@ import Data.List.Class (cons, joinL)
 -- | Left-fold for 'Producer' with function returning a monadic action holding the result.
 foldlMP :: Monad m => (a -> b -> m a) -> a -> Producer m b -> m a
 foldlMP func startVal =
-  evalConsumerT $ r startVal
+  consume $ r startVal
   where
     r s = do
       x <- next
@@ -47,7 +47,7 @@ foldlP func =
 -- | Left-fold for 'Producer' which reduces intermediate values to WHNF (weak head normal form).
 foldlP' :: Monad m => (a -> b -> a) -> a -> Producer m b -> m a
 foldlP' func startVal =
-  evalConsumerT $ r startVal
+  consume $ r startVal
   where
     r s = do
       x <- s `seq` next
@@ -59,7 +59,7 @@ foldlP' func startVal =
 -- The "cons" function gets a monadic action holding the right result so it could choose to avoid its execution.
 foldrP :: Monad m => (a -> m b -> m b) -> m b -> Producer m a -> m b
 foldrP consFunc nilFunc =
-  evalConsumerT . fix $ \rest -> do
+  consume . fix $ \rest -> do
     mx <- next
     case mx of
       Nothing -> lift nilFunc
@@ -116,7 +116,7 @@ lengthP = foldlP' (const . (+ 1))  0
 -- | Take the first N elements from a 'Producer'
 takeP :: (Monad m, Integral i) => i -> Producer m a -> Producer m a
 takeP count =
-  joinL . evalConsumerT (foldr r (return mzero) [1..count])
+  joinL . consume (foldr r (return mzero) [1..count])
   where
     r _ rest = do
       mx <- next
@@ -137,7 +137,7 @@ lastP = foldlP' (const id) undefined
 transformProdMonad :: (Monad m, Monad s) =>
   (forall a. m a -> m (s a)) -> Producer m v -> m (Producer s v)
 transformProdMonad trans =
-  evalConsumerT . fix $ \rest -> do
+  consume . fix $ \rest -> do
     mx <- next
     case mx of
       Nothing -> return mzero
@@ -154,7 +154,7 @@ liftProdMonad = joinL . lift . transformProdMonad (return . lift)
 consumeLift ::
   (Monad (t m), Monad m, MonadTrans t) =>
   ConsumerT a (t m) b -> Producer m a -> t m b
-consumeLift consumer = evalConsumerT consumer . liftProdMonad
+consumeLift consumer = consume consumer . liftProdMonad
 
 -- | Zip two 'Producer's.
 -- Also "zips"/interlaces their monadic effects.
