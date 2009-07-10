@@ -17,6 +17,7 @@ module Control.Generator.Folds (
   ) where
 
 import Control.Monad.Producer (Producer, consM, consume)
+import Control.Monad.ListT (ListT)
 import Control.Monad.Consumer (ConsumerT, next, consumeRestM)
 import Control.Monad.Generator (produce, yield)
 import Control.Monad (MonadPlus(..), forever, liftM, liftM2)
@@ -153,7 +154,7 @@ liftProdMonad = joinL . lift . transformProdMonad (return . lift)
 
 consumeLift ::
   (Monad (t m), Monad m, MonadTrans t) =>
-  ConsumerT a (t m) b -> Producer m a -> t m b
+  ConsumerT a (ListT (t m)) (t m) b -> Producer m a -> t m b
 consumeLift consumer = consume consumer . liftProdMonad
 
 -- | Zip two 'Producer's.

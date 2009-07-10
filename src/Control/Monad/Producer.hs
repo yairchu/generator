@@ -49,6 +49,6 @@ consM action xs =
   joinL $ liftM (`cons` xs) action
 
 -- | Consume a 'Producer' with a 'ConsumerT'
-consume :: Monad m => ConsumerT v m a -> Producer m v -> m a
+consume :: Monad m => ConsumerT v (ListT m) m a -> Producer m v -> m a
 consume consumer = evalConsumerT consumer . toList . runProducer
 

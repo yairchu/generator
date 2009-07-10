@@ -13,29 +13,29 @@ import Data.List.Class (ListItem(..), List(..))
 import Data.Maybe (fromMaybe)
 
 -- | A monad tranformer for [partially] consuming 'ListT's.
-newtype ConsumerT v m a = ConsumerT { runConsumerT :: StateT (Maybe (ListT m v)) m a }
+newtype ConsumerT v l m a = ConsumerT { runConsumerT :: StateT (Maybe (l v)) m a }
 
-instance Monad m => Monad (ConsumerT v m) where
+instance Monad m => Monad (ConsumerT v l m) where
   return = ConsumerT . return
   fail = ConsumerT . fail
   a >>= b = ConsumerT $ runConsumerT a >>= runConsumerT . b
 
-instance MonadTrans (ConsumerT v) where
+instance MonadTrans (ConsumerT v l) where
   lift = ConsumerT . lift
 
-instance MonadIO m => MonadIO (ConsumerT v m) where
+instance MonadIO m => MonadIO (ConsumerT v l m) where
   liftIO = lift . liftIO
 
 evalConsumerT ::
-  Monad m => ConsumerT v m a -> ListT m v -> m a
+  List l m => ConsumerT v l m a -> l v -> m a
 evalConsumerT (ConsumerT i) = evalStateT i . Just
 
 -- Consumer no longer has a producer left...
-putNoProducer :: Monad m => StateT (Maybe (ListT m v)) m ()
+putNoProducer :: List l m => StateT (Maybe (l v)) m ()
 putNoProducer = put Nothing
 
 -- | Consume next value
-next :: Monad m => ConsumerT v m (Maybe v)
+next :: List l m => ConsumerT v l m (Maybe v)
 next =
   ConsumerT . runMaybeT $ do
   prod <- MaybeT get
@@ -52,12 +52,11 @@ next =
 
 -- | Return an instance of the underlying monad that will use the given 'ConsumerT' to consume the remaining values.
 -- After this action there are no more items to consume (they belong to the given ConsumerT now)
-consumeRestM :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
+consumeRestM :: List l m => ConsumerT a l m b -> ConsumerT a l m (m b)
 consumeRestM consume =
   ConsumerT $ do
     mRest <- get
     let rest = fromMaybe mzero mRest
     putNoProducer
     return $ evalConsumerT consume rest
-
 
