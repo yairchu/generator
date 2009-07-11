@@ -11,7 +11,7 @@ module Data.List.Tree (
 import Control.Monad (MonadPlus(..), join, liftM)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
-  List(..), cons, foldlL, fromList, toList)
+  List(..), cons, foldlL, fromList, toList, convList)
 
 search :: (List l m, MonadPlus m) => (m (m a) -> m a) -> l a -> m a
 search merge =
@@ -23,10 +23,9 @@ search merge =
 dfs :: (List l m, MonadPlus m) => l a -> m a
 dfs = search join
 
-transpose :: Monad m => ListT m (ListT m v) -> ListT m (ListT m v)
---List a m => a (ListT m v) -> a (ListT m v)
+transpose :: List l m => l (l v) -> l (l v)
 transpose matrix =
-  joinL $ toList matrix >>= r
+  joinL $ toList (liftM convList matrix) >>= r
   where
     r = liftM t . mapM runListT'
     t items =
@@ -34,11 +33,11 @@ transpose matrix =
       joinL . r $ map tailL items
 
 -- | Transform a tree into lists of the items in its different layers
-bfsLayers :: Monad m => ListT (ListT m) a -> ListT m (ListT m a)
-bfsLayers = search (liftM join . transpose) . liftM return
+bfsLayers :: (List l k, List k m) => l a -> k (k a)
+bfsLayers = convList . search (liftM join . transpose) . liftM return
 
 -- | Flatten a tree in BFS order. (Breadth First Search)
-bfs :: Monad m => ListT (ListT m) a -> ListT m a
+bfs :: (List l k, List k m) => l a -> k a
 bfs = join . bfsLayers
 
 mergeOn :: (Ord b, Monad m) => (a -> b) -> ListT m (ListT m a) -> ListT m a
