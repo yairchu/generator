@@ -1,8 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 
 import Control.Monad.ListT (ListT)
+import Control.Monad.DList (DListT, consume)
 import Control.Monad.Consumer (ConsumerT, next)
-import Control.Monad.Producer (Producer, consume)
 import Control.Monad.Generator (GeneratorT, produce, yield, yields)
 import Control.Monad (forever, mapM_, mzero)
 import Control.Monad.Maybe (MaybeT(..))
@@ -14,8 +14,8 @@ import Data.List.Class (
 
 import Prelude hiding (sequence_)
 
-intProducer :: Producer IO Int
-intProducer =
+intDListT :: DListT IO Int
+intDListT =
     produce $ do
       lift . putStrLn $ "yielding 1"
       yield 1
@@ -25,8 +25,8 @@ intProducer =
       yield 100
       lift . putStrLn $ "int producer is done!"
 
-strProducer :: Producer IO String
-strProducer =
+strDListT :: DListT IO String
+strDListT =
     produce $ do
       lift . putStrLn $ "yielding string1"
       yield "string1"
@@ -66,10 +66,10 @@ cumSum = do
 lineSpace :: IO ()
 lineSpace = putStrLn ""
 
-printProducer :: Show a => Producer IO a -> IO ()
-printProducer = sequence_ . fmap print
+printDListT :: Show a => DListT IO a -> IO ()
+printDListT = sequence_ . fmap print
 
-permute :: [a] -> Producer [] a
+permute :: [a] -> DListT [] a
 permute [] = mzero
 permute xs =
   produce $ do
@@ -78,7 +78,7 @@ permute xs =
     yield x
     yields . permute $ pre ++ post
 
-transTest :: Producer IO Char
+transTest :: DListT IO Char
 transTest = do
   lift $ putStrLn "Hello"
   lift $ putStrLn "World"
@@ -89,13 +89,13 @@ transTest = do
 main :: IO ()
 main =
   mapM_ (>> lineSpace)
-       [printProducer transTest
-       ,printProducer intProducer
-       ,printProducer . genericTake (2::Int) $ intProducer
-       ,consume testConsumer intProducer
-       ,consume (consume testConsumer2 . transformListMonad lift $ strProducer) intProducer
-       ,printProducer . genericTake (3::Int) . produce . consume cumSum . transformListMonad lift $ intProducer
-       --,printProducer . zipP strProducer $ intProducer
+       [printDListT transTest
+       ,printDListT intDListT
+       ,printDListT . genericTake (2::Int) $ intDListT
+       ,consume testConsumer intDListT
+       ,consume (consume testConsumer2 . transformListMonad lift $ strDListT) intDListT
+       ,printDListT . genericTake (3::Int) . produce . consume cumSum . transformListMonad lift $ intDListT
+       --,printDListT . zipP strDListT $ intDListT
        ,print . toList $ permute "abc"
        ]
 

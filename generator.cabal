@@ -13,10 +13,9 @@ Library
   Extensions:
   Build-Depends:       base, haskell98, mtl, MaybeT
   Exposed-modules:     Control.Monad.ListT,
-                       Control.Monad.Producer,
+                       Control.Monad.DList,
                        Control.Monad.Consumer,
                        Control.Monad.Generator,
-                       Data.DList.Generic,
                        Data.List.Class,
                        Data.List.Tree
   ghc-options:         -Wall
