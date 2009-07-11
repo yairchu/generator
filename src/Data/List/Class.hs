@@ -6,11 +6,11 @@ module Data.List.Class (
   -- | List operations for MonadPlus
   cons, fromList, filter,
   -- | Standard list operations for FoldList instances
-  takeWhile, genericLength, scanl,
+  takeWhile, genericLength, scanl, sequence_,
   -- | Standard list operations for List instances
   genericTake,
   -- | Non standard FoldList operations
-  foldlL, execute, toList,
+  foldlL, toList, execute,
   -- | For implementing FoldList instances from List
   listFoldrL
   ) where
@@ -18,7 +18,7 @@ module Data.List.Class (
 import Control.Monad (MonadPlus(..), ap, join, liftM)
 import Control.Monad.Identity (Identity(..))
 import Data.Foldable (Foldable, foldr)
-import Prelude hiding (foldr, filter, takeWhile, scanl)
+import Prelude hiding (foldr, filter, takeWhile, sequence_, scanl)
 
 data ListItem l a =
   Nil |
@@ -96,8 +96,11 @@ genericTake count
     joinStep (Just (1, x)) = const $ return x
     joinStep (Just (_, x)) = cons x . joinL
 
-execute :: FoldList l m => l (m ()) -> m ()
-execute = foldrL (>>) (return ())
+execute :: FoldList l m => l a -> m ()
+execute = foldlL const ()
+
+sequence_ :: FoldList l m => l (m a) -> m ()
+sequence_ = foldrL (>>) (return ()) . liftM (>> return ())
 
 takeWhile :: FoldList l m => (a -> Bool) -> l a -> l a
 takeWhile cond =

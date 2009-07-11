@@ -8,7 +8,9 @@ import Control.Monad ( {- forever, -} mapM_, mzero)
 --import Control.Monad.Maybe (MaybeT(..))
 --import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
-import Data.List.Class (fromList, genericTake, execute, toList)
+import Data.List.Class (fromList, genericTake, execute, sequence_, toList)
+
+import Prelude hiding (sequence_)
 
 intProducer :: Producer IO Int
 intProducer =
@@ -67,7 +69,7 @@ lineSpace :: IO ()
 lineSpace = putStrLn ""
 
 printProducer :: Show a => Producer IO a -> IO ()
-printProducer = execute . fmap print
+printProducer = sequence_ . fmap print
 
 permute :: [a] -> Producer [] a
 permute [] = mzero
@@ -91,7 +93,7 @@ main =
   mapM_ (>> lineSpace)
        [execute transTest
        ,printProducer intProducer
-       ,printProducer . genericTake (1::Int) $ intProducer
+       ,printProducer . genericTake (2::Int) $ intProducer
        ,consume testConsumer intProducer
        --,consume (consume testConsumer2 . liftProdMonad $ strProducer) intProducer
        --,execute . fmap print . takeL (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
