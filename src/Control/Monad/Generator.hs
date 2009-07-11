@@ -12,7 +12,7 @@ import Control.Monad (liftM, ap)
 import Control.Monad.Cont (Cont (..))
 import Control.Monad.Producer (Producer)
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
-import Data.List.Class (BaseList(..), cons)
+import Data.List.Class (cons, joinL)
 import Data.Monoid (Monoid(..))
 
 newtype GeneratorT v m a =

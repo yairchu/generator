@@ -9,46 +9,46 @@ module Data.List.Tree (
   ) where
 
 import Control.Monad (MonadPlus(..), join, liftM)
+import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
-  List(..), ListItem(..), FoldList(..),
-  cons, foldlL, fromList, joinL, toList)
+  List(..), cons, foldlL, fromList, toList)
 
-search :: (FoldList l m, MonadPlus m) => (m (m a) -> m a) -> l a -> m a
+search :: (List l m, MonadPlus m) => (m (m a) -> m a) -> l a -> m a
 search merge =
   merge . foldrL step mzero
   where
     step a = return . cons a . merge
 
 -- | Flatten a tree in DFS pre-order. (Depth First Search)
-dfs :: (FoldList l m, MonadPlus m) => l a -> m a
+dfs :: (List l m, MonadPlus m) => l a -> m a
 dfs = search join
 
-transpose :: (FoldList a m, List b m) => a (b v) -> a (b v)
+transpose :: Monad m => ListT m (ListT m v) -> ListT m (ListT m v)
+--List a m => a (ListT m v) -> a (ListT m v)
 transpose matrix =
   joinL $ toList matrix >>= r
   where
-    r = liftM t . mapM unCons
+    r = liftM t . mapM runListT'
     t items =
       cons (fromList (map headL items)) .
       joinL . r $ map tailL items
 
 -- | Transform a tree into lists of the items in its different layers
-bfsLayers ::
-  (FoldList l k, FoldList k m, List k m) => l a -> k (k a)
+bfsLayers :: Monad m => ListT (ListT m) a -> ListT m (ListT m a)
 bfsLayers = search (liftM join . transpose) . liftM return
 
 -- | Flatten a tree in BFS order. (Breadth First Search)
-bfs :: (FoldList l k, FoldList k m, List k m) => l a -> k a
+bfs :: Monad m => ListT (ListT m) a -> ListT m a
 bfs = join . bfsLayers
 
-mergeOn :: (Ord b, FoldList l m, List k m) => (a -> b) -> l (k a) -> k a
+mergeOn :: (Ord b, Monad m) => (a -> b) -> ListT m (ListT m a) -> ListT m a
 mergeOn f =
   joinL . foldlL merge2 mzero
   where
     merge2 xx yy =
       joinL $ do
-        xi <- unCons xx
-        yi <- unCons yy
+        xi <- runListT' xx
+        yi <- runListT' yy
         return $ case (xi, yi) of
           (Cons x xs, Cons y ys)
             | f y > f x -> cons x . merge2 xs $ cons y ys
@@ -59,12 +59,13 @@ mergeOn f =
 
 -- | Best First Search given a scoring function.
 bestFirstSearchOn ::
-  (Ord b, List l k, List k m, FoldList l k, FoldList k m) => (a -> b) -> l a -> k a
+  (Ord b, Monad m) => (a -> b) -> ListT (ListT m) a -> ListT m a
 bestFirstSearchOn = search . mergeOn
 
 mergeOnSortedHeads ::
   Ord b => (a -> b) -> [[a]] -> [a]
-mergeOnSortedHeads f list =
+mergeOnSortedHeads f list = undefined f list
+{-
   joinL $ do
     item <- unCons list
     case item of
@@ -82,11 +83,12 @@ mergeOnSortedHeads f list =
       | f a <= f b = (a : as) : (b : bs) : bss
       | otherwise = (b : bs) : bury (a : as) bss
     bury a b = a : b -- one of them is []
+-}
 
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
 bestFirstSearchSortedChildrenOn ::
-  (Ord o, FoldList l []) => (a -> o) -> l a -> [a]
+  (Ord o, List l []) => (a -> o) -> l a -> [a]
 bestFirstSearchSortedChildrenOn =
   search . mergeOnSortedHeads
 

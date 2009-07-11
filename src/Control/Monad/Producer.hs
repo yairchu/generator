@@ -15,7 +15,7 @@ import Control.Monad.Consumer (ConsumerT, evalConsumerT)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.DList.Generic (DList(..), toList)
-import Data.List.Class (BaseList(..), FoldList(..), cons)
+import Data.List.Class (List(..), cons)
 import Data.Monoid (Monoid(..))
 
 data Producer m a = Producer { runProducer :: DList (ListT m) a }
@@ -35,15 +35,13 @@ instance Monad m => MonadPlus (Producer m) where
   mzero = mempty
   mplus = mappend
 
-instance Monad m => BaseList (Producer m) m where
+instance Monad m => List (Producer m) m where
   joinL action =
     Producer $ DList r
     where
       r rest = joinL $ liftM ((`runDList` rest) . runProducer) action
-
-instance Monad m => FoldList (Producer m) m where
   foldrL consFunc nilFunc =
-    foldrL consFunc nilFunc . toList . runProducer
+    foldrL consFunc nilFunc . runProducer
 
 instance MonadTrans Producer where
   lift = (`consM` mzero)
@@ -53,6 +51,6 @@ consM action xs =
   joinL $ liftM (`cons` xs) action
 
 -- | Consume a 'Producer' with a 'ConsumerT'
-consume :: Monad m => ConsumerT v (ListT m) m a -> Producer m v -> m a
+consume :: Monad m => ConsumerT v m a -> Producer m v -> m a
 consume consumer = evalConsumerT consumer . toList . runProducer
 

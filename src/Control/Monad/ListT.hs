@@ -16,10 +16,12 @@ import Control.Monad.Error.Class (MonadError(..))
 import Control.Monad.Reader.Class (MonadReader(..))
 import Control.Monad.State.Class (MonadState(..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
-import Data.List.Class (
-  BaseList(..), FoldList(..), List(..), ListItem(..),
-  fromList, listFoldrL, toList)
+import Data.List.Class (List(..), fromList, toList)
 import Data.Monoid (Monoid(..))
+
+data ListItem l a =
+  Nil |
+  Cons { headL :: a, tailL :: l a }
 
 -- runListT' called this way because am implementing mtl's runListT
 data ListT m a = ListT { runListT' :: m (ListItem (ListT m) a) }
@@ -59,14 +61,13 @@ instance Monad m => MonadPlus (ListT m) where
 instance MonadTrans ListT where
   lift = ListT . liftM (`Cons` mempty)
 
-instance Monad m => BaseList (ListT m) m where
-  joinL = ListT . (>>= runListT')
-
 instance Monad m => List (ListT m) m where
-  unCons = runListT'
-
-instance Monad m => FoldList (ListT m) m where
-  foldrL = listFoldrL
+  joinL = ListT . (>>= runListT')
+  foldrL consFunc nilFunc list = do
+    item <- runListT' list
+    case item of
+      Nil -> nilFunc
+      Cons x xs -> consFunc x $ foldrL consFunc nilFunc xs
 
 -- | Acronym for toList for compatability with mtl's ListT
 runListT :: Monad m => ListT m a -> m [a]
