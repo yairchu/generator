@@ -75,23 +75,23 @@ permute :: [a] -> Producer [] a
 permute [] = mzero
 permute xs =
   produce $ do
-  i <- lift [0 .. length xs - 1]
-  let (pre, x : post) = splitAt i xs
-  yield x
-  yields . permute $ pre ++ post
+    i <- lift [0 .. length xs - 1]
+    let (pre, x : post) = splitAt i xs
+    yield x
+    yields . permute $ pre ++ post
 
-transTest :: ListT IO (IO ())
+transTest :: Producer IO Char
 transTest = do
   lift $ putStrLn "Hello"
   lift $ putStrLn "World"
   a <- fromList "ABC"
-  lift $ print a
-  return $ print a
+  lift . putStrLn $ "Whooh " ++ a : ""
+  return a
 
 main :: IO ()
 main =
   mapM_ (>> lineSpace)
-       [execute transTest
+       [printProducer transTest
        ,printProducer intProducer
        ,printProducer . genericTake (2::Int) $ intProducer
        ,consume testConsumer intProducer

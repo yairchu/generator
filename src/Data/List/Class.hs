@@ -1,16 +1,14 @@
-{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, RankNTypes, UndecidableInstances #-}
 
 module Data.List.Class (
   -- | The List typeclass
   BaseList(..), FoldList(..), List (..), ListItem (..),
   -- | List operations for MonadPlus
   cons, fromList, filter,
-  -- | Standard list operations for FoldList instances
-  takeWhile, genericLength, scanl, sequence_,
-  -- | Standard list operations for List instances
-  genericTake,
+  -- | Standard list operations
+  takeWhile, genericTake, genericLength, scanl, sequence_,
   -- | Non standard FoldList operations
-  foldlL, toList, execute,
+  foldlL, toList, execute, transformListMonad,
   -- | For implementing FoldList instances from List
   listFoldrL
   ) where
@@ -118,3 +116,12 @@ toList =
 
 genericLength :: (Integral i, FoldList l m) => l a -> m i
 genericLength = foldlL (const . (+ 1)) 0
+
+transformListMonad :: (FoldList l m, FoldList k s) =>
+  (forall x. m x -> s x) -> l a -> k a
+transformListMonad trans =
+  t . foldrL step (return mzero)
+  where
+    t = joinL . trans
+    step x = return . cons x . t
+
