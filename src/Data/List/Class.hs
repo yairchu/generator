@@ -8,19 +8,17 @@ module Data.List.Class (
   -- | Standard list operations for FoldList instances
   takeWhile, genericLength, scanl,
   -- | Standard list operations for List instances
-  genericDrop, genericTake,
+  genericTake,
   -- | Non standard FoldList operations
   foldlL, execute, toList,
-  -- | Non standard List operations
-  splitAtL,
   -- | For implementing FoldList instances from List
   listFoldrL
   ) where
 
 import Control.Monad (MonadPlus(..), ap, join, liftM)
 import Control.Monad.Identity (Identity(..))
-import Data.Foldable (Foldable, foldl')
-import Prelude hiding (filter, takeWhile, scanl)
+import Data.Foldable (Foldable, foldr)
+import Prelude hiding (foldr, filter, takeWhile, scanl)
 
 data ListItem l a =
   Nil |
@@ -49,7 +47,7 @@ cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return
 
 fromList :: (MonadPlus m, Foldable t) => t a -> m a
-fromList = foldl' (flip (mplus . return)) mzero
+fromList = foldr (mplus . return) mzero
 
 filter :: MonadPlus m => (a -> Bool) -> m a -> m a
 filter cond =
@@ -69,11 +67,11 @@ listFoldrL consFunc nilFunc list = do
 -- for foldlL and scanl
 foldlL' :: FoldList l m =>
   (a -> m c -> c) -> (a -> c) -> (a -> b -> a) -> a -> l b -> c
-foldlL' process end step startVal =
-  t startVal . foldrL astep (return end)
+foldlL' joinVals atEnd step startVal =
+  t startVal . foldrL astep (return atEnd)
   where
     astep x rest = return $ (`t` rest) . (`step` x)
-    t cur = process cur . (`ap` return cur)
+    t cur = joinVals cur . (`ap` return cur)
 
 foldlL :: FoldList l m => (a -> b -> a) -> a -> l b -> m a
 foldlL step startVal =
@@ -83,9 +81,23 @@ foldlL step startVal =
 
 scanl :: FoldList l m => (a -> b -> a) -> a -> l b -> l a
 scanl =
-  foldlL' t $ const mzero
+  foldlL' consJoin $ const mzero
   where
-    t cur = cons cur . joinL
+    consJoin cur = cons cur . joinL
+
+genericTake :: (Integral i, FoldList l m) => i -> l a -> l a
+genericTake count
+  | count <= 0 = const mzero
+  | otherwise = foldlL' joinStep (const mzero) next Nothing
+  where
+    next Nothing x = Just (count, x)
+    next (Just (i, _)) y = Just (i - 1, y)
+    joinStep Nothing = joinL
+    joinStep (Just (1, x)) = const $ return x
+    joinStep (Just (_, x)) = cons x . joinL
+
+execute :: FoldList l m => l (m ()) -> m ()
+execute = foldrL (>>) (return ())
 
 takeWhile :: FoldList l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
@@ -95,23 +107,6 @@ takeWhile cond =
       | cond x = return . cons x . joinL
       | otherwise = const $ return mzero
 
-splitAtL :: (Integral i, List l m) => i -> l a -> m (l a, l a)
-splitAtL count list
-  | count <= 0 = return (mzero, list)
-  | otherwise = do
-    item <- unCons list
-    case item of
-      Nil -> return (mzero, mzero)
-      Cons x xs -> do
-        (pre, post) <- splitAtL (count - 1) xs
-        return (cons x pre, post)
-
-genericDrop :: (Integral i, List l m) => i -> l a -> l a
-genericDrop count = joinL . liftM snd . splitAtL count
-
-genericTake :: (Integral i, List l m) => i -> l a -> l a
-genericTake count = joinL . liftM fst . splitAtL count
-
 toList :: FoldList m i => m a -> i [a]
 toList =
   foldrL step $ return []
@@ -120,7 +115,3 @@ toList =
 
 genericLength :: (Integral i, FoldList l m) => l a -> m i
 genericLength = foldlL (const . (+ 1)) 0
-
-execute :: FoldList l m => l a -> m ()
-execute = foldrL (const id) $ return ()
-

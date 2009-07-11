@@ -8,7 +8,7 @@ import Control.Monad ( {- forever, -} mapM_, mzero)
 --import Control.Monad.Maybe (MaybeT(..))
 --import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
-import Data.List.Class (fromList, execute, toList)
+import Data.List.Class (fromList, genericTake, execute, toList)
 
 intProducer :: Producer IO Int
 intProducer =
@@ -78,19 +78,20 @@ permute xs =
   yield x
   yields . permute $ pre ++ post
 
-transTest :: ListT IO ()
+transTest :: ListT IO (IO ())
 transTest = do
   lift $ putStrLn "Hello"
   lift $ putStrLn "World"
   a <- fromList "ABC"
   lift $ print a
+  return $ print a
 
 main :: IO ()
 main =
   mapM_ (>> lineSpace)
        [execute transTest
        ,printProducer intProducer
-       --,printProducer . takeL (2::Int) $ intProducer
+       ,printProducer . genericTake (1::Int) $ intProducer
        ,consume testConsumer intProducer
        --,consume (consume testConsumer2 . liftProdMonad $ strProducer) intProducer
        --,execute . fmap print . takeL (3::Int) . produce . evalConsumerT cumSum . liftProdMonad $ intProducer
