@@ -1,10 +1,11 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Control.Monad.Consumer (
-  ConsumerT, evalConsumerT, next, consumeRestM
+  ConsumerT, Consumer, evalConsumerT, next, consumeRestM
   ) where
 
 import Control.Monad (MonadPlus(..))
+import Control.Monad.ListT (ListT)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
@@ -13,6 +14,8 @@ import Data.Maybe (fromMaybe)
 
 -- | A monad tranformer for [partially] consuming 'ListT's.
 newtype ConsumerT v l m a = ConsumerT { runConsumerT :: StateT (Maybe (l v)) m a }
+
+type Consumer v m = ConsumerT v (ListT m) m
 
 instance Monad m => Monad (ConsumerT v l m) where
   return = ConsumerT . return
