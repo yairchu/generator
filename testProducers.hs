@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 import Control.Monad.ListT (ListT)
-import Control.Monad.Consumer (Consumer, next)
+import Control.Monad.Consumer (ConsumerT, next)
 import Control.Monad.Producer (Producer, consume)
 import Control.Monad.Generator (GeneratorT, produce, yield, yields)
 import Control.Monad (forever, mapM_, mzero)
@@ -34,7 +34,7 @@ strProducer =
       yield "string2"
       lift . putStrLn $ "string producer is done!"
 
-testConsumer :: Consumer Int IO ()
+testConsumer :: ConsumerT Int IO ()
 testConsumer = do
   lift . putStrLn $ "testConsumer starting"
   Just a <- next
@@ -44,7 +44,7 @@ testConsumer = do
 -- A complicated ConsumerT transformer stack should probably get a
 -- newtype with names for the various lifters... But for the example's
 -- sake, we keep fewer levels of indirection
-testConsumer2 :: Consumer String (Consumer Int IO) ()
+testConsumer2 :: ConsumerT String (ConsumerT Int IO) ()
 testConsumer2 = do
   liftIO . putStrLn $ "testConsumer2 starting"
   Just s1 <- next
@@ -56,7 +56,7 @@ testConsumer2 = do
   liftIO . putStrLn $ "read two int values whose sum is " ++ show (i1+i2)
   liftIO . putStrLn $ "read two str values whose concat is " ++ s1 ++ s2
 
-cumSum :: Monad m => Consumer Int (GeneratorT Int m) ()
+cumSum :: Monad m => ConsumerT Int (GeneratorT Int m) ()
 cumSum = do
   runMaybeT . flip evalStateT 0 . forever $ do
     lift . lift . lift . yield =<< get

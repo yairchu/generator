@@ -34,7 +34,7 @@ putNoProducer :: List l m => StateT (Maybe (l v)) m ()
 putNoProducer = put Nothing
 
 -- | Consume next value
-next :: List l m => ConsumerT v m (Maybe v)
+next :: Monad m => ConsumerT v m (Maybe v)
 next =
   ConsumerT . runMaybeT $ do
   list <- MaybeT get
