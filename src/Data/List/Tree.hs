@@ -1,17 +1,21 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
 
 -- | Functions for flattening 'Producer's of the lists.
 -- A 'Producer []' is a tree.
 module Data.List.Tree (
-  dfs, bfs, bfsLayers, bestFirstSearchOn,
+  Tree, dfs, bfs, bfsLayers, bestFirstSearchOn,
   bestFirstSearchSortedChildrenOn
   ) where
 
 import Control.Monad (MonadPlus(..), join, liftM)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
-  List(..), cons, foldlL, fromList, toList, convList)
+  List(..), cons, foldlL, fromList, toList,
+  transformListMonad)
+
+class (List l k, List k m) => Tree l k m
+instance (List l k, List k m) => Tree l k m
 
 search :: (List l m, MonadPlus m) => (m (m a) -> m a) -> l a -> m a
 search merge =
@@ -23,21 +27,27 @@ search merge =
 dfs :: (List l m, MonadPlus m) => l a -> m a
 dfs = search join
 
-transpose :: List l m => l (l v) -> l (l v)
+transpose :: Monad m => ListT m (ListT m v) -> ListT m (ListT m v)
 transpose matrix =
-  joinL $ toList (liftM toListT matrix) >>= r
+  joinL $ toList matrix >>= r
   where
     r = liftM t . mapM runListT
     t items =
       cons (fromList (map headL items)) .
       joinL . r $ map tailL items
 
+treeToListTree :: Tree l k m => l a -> ListT (ListT m) a
+treeToListTree = transformListMonad toListT
+
 -- | Transform a tree into lists of the items in its different layers
-bfsLayers :: (List l k, List k m) => l a -> k (k a)
-bfsLayers = convList . search (liftM join . transpose) . liftM return
+bfsLayers :: Tree l k m => l a -> k (k a)
+bfsLayers =
+  fromListT . liftM fromListT .
+  search (liftM join . transpose) . liftM return .
+  treeToListTree
 
 -- | Flatten a tree in BFS order. (Breadth First Search)
-bfs :: (List l k, List k m) => l a -> k a
+bfs :: Tree l k m => l a -> k a
 bfs = join . bfsLayers
 
 mergeOn :: (Ord b, Monad m) => (a -> b) -> ListT m (ListT m a) -> ListT m a
@@ -58,8 +68,9 @@ mergeOn f =
 
 -- | Best First Search given a scoring function.
 bestFirstSearchOn ::
-  (Ord b, Monad m) => (a -> b) -> ListT (ListT m) a -> ListT m a
-bestFirstSearchOn = search . mergeOn
+  (Ord b, Tree l k m) => (a -> b) -> l a -> k a
+bestFirstSearchOn func =
+  fromListT . search (mergeOn func) . treeToListTree
 
 mergeOnSortedHeads ::
   Ord b => (a -> b) -> [[a]] -> [a]

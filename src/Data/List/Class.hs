@@ -22,6 +22,8 @@ class (MonadPlus l, Monad m) => List l m | l -> m where
   foldrL consFunc nilFunc = foldrL consFunc nilFunc . toListT
   toListT :: l a -> ListT m a
   toListT = convList
+  fromListT :: ListT m a -> l a
+  fromListT = convList
 
 instance List [] Identity where
   joinL = runIdentity
@@ -32,6 +34,7 @@ instance Monad m => List (ListT m) m where
   joinL = ListT . (>>= runListT)
   foldrL = foldrListT
   toListT = id
+  fromListT = id
 
 cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return
