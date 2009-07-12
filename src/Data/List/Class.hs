@@ -150,6 +150,10 @@ transformListMonad trans =
     t = joinL . trans
     step x = return . cons x . t
 
+-- | Lift the underlying monad of a list and transform it to a ListT.
+--
+-- Doing plain 'transformListMonad lift' instead doesn't give the compiler
+-- the same knowledge about the types.
 liftListMonad ::
   (MonadTrans t, Monad (t m), List l m) =>
   l a -> ListT (t m) a

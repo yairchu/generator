@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
 
--- | A difference-list monad transformer / a monadic difference-list
+-- | A difference-list monad transformer / a monadic difference-list.
+--
 -- Difference lists are lists with /O(1)/ append (instead of /O(N)/).
 --
 -- Transforming a difference list to a list is /O(1)/,
