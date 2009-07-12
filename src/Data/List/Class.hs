@@ -8,7 +8,8 @@ module Data.List.Class (
   -- | List operations for MonadPlus
   cons, fromList, filter,
   -- | Standard list operations
-  takeWhile, genericTake, scanl, sequence_,
+  takeWhile, genericTake, scanl,
+  sequence_, zip, zipWith,
   -- | Non standard List operations
   foldlL, toList, execute, lengthL,
   transformListMonad, convList, joinM,
@@ -17,9 +18,10 @@ module Data.List.Class (
 
 import Control.Monad (MonadPlus(..), ap, join, liftM)
 import Control.Monad.Identity (Identity(..))
-import Control.Monad.ListT (ListT(..), foldrListT)
+import Control.Monad.ListT (ListT(..), ListItem(..), foldrListT)
 import Control.Monad.Trans (MonadTrans(..))
-import Prelude hiding (filter, takeWhile, sequence_, scanl)
+import Prelude hiding (
+  filter, takeWhile, sequence_, scanl, zip, zipWith)
 
 -- | A class for list types.
 -- Every list has an underlying monad.
@@ -152,4 +154,23 @@ liftListMonad ::
   (MonadTrans t, Monad (t m), List l m) =>
   l a -> ListT (t m) a
 liftListMonad = transformListMonad lift
+
+zipWith :: List l m => (a -> b -> c) -> l a -> l b -> l c
+zipWith func as bs =
+  r (toListT as) (toListT bs)
+  where
+    r xx yy =
+      joinL $ do
+        xi <- runListT xx
+        case xi of
+          Nil -> return mzero
+          Cons x xs -> do
+            yi <- runListT yy
+            return $ case yi of
+              Nil -> mzero
+              Cons y ys ->
+                cons (func x y) $ r xs ys
+
+zip :: List l m => l a -> l b -> l (a, b)
+zip = zipWith (,)
 
