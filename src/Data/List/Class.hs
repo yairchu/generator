@@ -155,8 +155,8 @@ liftListMonad ::
   l a -> ListT (t m) a
 liftListMonad = transformListMonad lift
 
-zipWith :: List l m => (a -> b -> c) -> l a -> l b -> l c
-zipWith func as bs =
+zip :: List l m => l a -> l b -> l (a, b)
+zip as bs =
   r (toListT as) (toListT bs)
   where
     r xx yy =
@@ -169,8 +169,8 @@ zipWith func as bs =
             return $ case yi of
               Nil -> mzero
               Cons y ys ->
-                cons (func x y) $ r xs ys
+                cons (x, y) $ r xs ys
 
-zip :: List l m => l a -> l b -> l (a, b)
-zip = zipWith (,)
+zipWith :: List l m => (a -> b -> c) -> l a -> l b -> l c
+zipWith func as = liftM (uncurry func) . zip as
 
