@@ -14,7 +14,7 @@ import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.List.Class (List(..))
 import Data.Maybe (fromMaybe)
 
--- | A monad tranformer for consuming 'ListT's.
+-- | A monad tranformer for consuming 'List's.
 newtype ConsumerT v m a = ConsumerT { runConsumerT :: StateT (Maybe (ListT m v)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
@@ -29,8 +29,8 @@ instance MonadIO m => MonadIO (ConsumerT v m) where
   liftIO = lift . liftIO
 
 -- | Consume a 'ListT'
-evalConsumerT :: Monad m => ConsumerT v m a -> ListT m v -> m a
-evalConsumerT (ConsumerT i) = evalStateT i . Just
+evalConsumerT :: List l m => ConsumerT v m a -> l v -> m a
+evalConsumerT (ConsumerT i) = evalStateT i . Just . toListT
 
 -- Consumer no longer has a producer left...
 putNoProducer :: List l m => StateT (Maybe (l v)) m ()

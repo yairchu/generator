@@ -11,12 +11,14 @@ module Data.List.Class (
   takeWhile, genericTake, scanl, sequence_,
   -- | Non standard List operations
   foldlL, toList, execute, lengthL,
-  transformListMonad, convList, joinM
+  transformListMonad, convList, joinM,
+  liftListMonad
   ) where
 
 import Control.Monad (MonadPlus(..), ap, join, liftM)
 import Control.Monad.Identity (Identity(..))
 import Control.Monad.ListT (ListT(..), foldrListT)
+import Control.Monad.Trans (MonadTrans(..))
 import Prelude hiding (filter, takeWhile, sequence_, scanl)
 
 -- | A class for list types.
@@ -145,4 +147,9 @@ transformListMonad trans =
   where
     t = joinL . trans
     step x = return . cons x . t
+
+liftListMonad ::
+  (MonadTrans t, Monad (t m), List l m) =>
+  l a -> ListT (t m) a
+liftListMonad = transformListMonad lift
 

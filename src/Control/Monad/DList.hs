@@ -1,14 +1,18 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
 
 -- | A difference-list monad transformer / a monadic difference-list
+-- Difference lists are lists with /O(1)/ append (instead of /O(N)/).
+--
+-- Transforming a difference list to a list is /O(1)/,
+-- a must be done to access a difference list.
+-- The transformation from a list to a difference list is /O(N)/.
 
 module Control.Monad.DList (
-  DListT (..), consume
+  DListT (..)
   ) where
 
 import Control.Applicative (Applicative(..))
 import Control.Monad (MonadPlus(..), liftM, ap)
-import Control.Monad.Consumer (ConsumerT, evalConsumerT)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.List.Class (List(..), cons)
@@ -44,8 +48,4 @@ instance Monad m => List (DListT m) m where
 
 instance MonadTrans DListT where
   lift = DListT . mappend . lift
-
--- | Consume a 'DListT' with a 'ConsumerT'
-consume :: Monad m => ConsumerT a m b -> DListT m a -> m b
-consume c = evalConsumerT c . toListT
 

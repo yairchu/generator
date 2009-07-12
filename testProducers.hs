@@ -1,16 +1,16 @@
 {-# OPTIONS -O2 -Wall #-}
 
 import Control.Monad.ListT (ListT)
-import Control.Monad.DList (DListT, consume)
-import Control.Monad.Consumer (ConsumerT, next)
+import Control.Monad.DList (DListT)
+import Control.Monad.Consumer (ConsumerT, evalConsumerT, next)
 import Control.Monad.Generator (GeneratorT, produce, yield, yields)
 import Control.Monad (forever, mapM_, mzero)
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (evalStateT, get, modify)
 import Control.Monad.Trans (MonadIO(..), lift)
 import Data.List.Class (
-  fromList, genericTake, execute, sequence_, toList,
-  transformListMonad)
+  fromList, genericTake, execute,
+  sequence_, toList, liftListMonad)
 
 import Prelude hiding (sequence_)
 
@@ -92,9 +92,9 @@ main =
        [printDListT transTest
        ,printDListT intDListT
        ,printDListT . genericTake (2::Int) $ intDListT
-       ,consume testConsumer intDListT
-       ,consume (consume testConsumer2 . transformListMonad lift $ strDListT) intDListT
-       ,printDListT . genericTake (3::Int) . produce . consume cumSum . transformListMonad lift $ intDListT
+       ,evalConsumerT testConsumer intDListT
+       ,evalConsumerT (evalConsumerT testConsumer2 . liftListMonad $ strDListT) intDListT
+       ,printDListT . genericTake (3::Int) . produce . evalConsumerT cumSum . liftListMonad $ intDListT
        --,printDListT . zipP strDListT $ intDListT
        ,print . toList $ permute "abc"
        ]
