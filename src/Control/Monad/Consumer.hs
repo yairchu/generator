@@ -1,5 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
+-- | A monad transformer for the [partial] consumption of 'List's.
+-- The interface closely mimics iterators in languages such as Python.
 module Control.Monad.Consumer (
   ConsumerT, evalConsumerT, next, consumeRestM
   ) where
@@ -12,7 +14,7 @@ import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.List.Class (List(..))
 import Data.Maybe (fromMaybe)
 
--- | A monad tranformer for [partially] consuming 'ListT's.
+-- | A monad tranformer for consuming 'ListT's.
 newtype ConsumerT v m a = ConsumerT { runConsumerT :: StateT (Maybe (ListT m v)) m a }
 
 instance Monad m => Monad (ConsumerT v m) where
@@ -26,6 +28,7 @@ instance MonadTrans (ConsumerT v) where
 instance MonadIO m => MonadIO (ConsumerT v m) where
   liftIO = lift . liftIO
 
+-- | Consume a 'ListT'
 evalConsumerT :: Monad m => ConsumerT v m a -> ListT m v -> m a
 evalConsumerT (ConsumerT i) = evalStateT i . Just
 
@@ -33,7 +36,7 @@ evalConsumerT (ConsumerT i) = evalStateT i . Just
 putNoProducer :: List l m => StateT (Maybe (l v)) m ()
 putNoProducer = put Nothing
 
--- | Consume next value
+-- | Consume/get the next value
 next :: Monad m => ConsumerT v m (Maybe v)
 next =
   ConsumerT . runMaybeT $ do

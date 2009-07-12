@@ -1,8 +1,8 @@
 {-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
 
--- | Functions for flattening 'Producer's of the lists.
--- A 'Producer []' is a tree.
+-- | Functions for iterating trees.
+-- A 'List' whose underlying monad is also a 'List' is a tree.
 module Data.List.Tree (
   Tree, dfs, bfs, bfsLayers, bestFirstSearchOn,
   prune, bestFirstSearchSortedChildrenOn
@@ -23,7 +23,7 @@ search merge =
   where
     step a = return . cons a . merge
 
--- | Flatten a tree in DFS pre-order. (Depth First Search)
+-- | Iterate a tree in DFS pre-order. (Depth First Search)
 dfs :: (List l m, MonadPlus m) => l a -> m a
 dfs = search join
 
@@ -46,7 +46,7 @@ bfsLayers =
   search (liftM join . transpose) . liftM return .
   toListTree
 
--- | Flatten a tree in BFS order. (Breadth First Search)
+-- | Iterate a tree in BFS order. (Breadth First Search)
 bfs :: Tree l k m => l a -> k a
 bfs = join . bfsLayers
 
@@ -107,11 +107,14 @@ mergeOnSortedHeads f list =
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
 bestFirstSearchSortedChildrenOn ::
-  (Ord o, Tree l k m) => (a -> o) -> l a -> k a
+  (Ord b, Tree l k m) => (a -> b) -> l a -> k a
 bestFirstSearchSortedChildrenOn func =
   fromListT . search (mergeOnSortedHeads func) . toListTree
 
-prune :: Tree l k m => (a -> Bool) -> l a -> l a
+-- | Prune a tree or list given a predicate.
+-- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
+-- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
+prune :: (List l m, MonadPlus m) => (a -> Bool) -> l a -> l a
 prune cond =
   joinM . liftM r
   where

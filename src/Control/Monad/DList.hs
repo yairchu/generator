@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
 
+-- | A difference-list monad transformer / a monadic difference-list
+
 module Control.Monad.DList (
   DListT (..), consume
   ) where
@@ -12,6 +14,7 @@ import Control.Monad.Trans (MonadTrans(..))
 import Data.List.Class (List(..), cons)
 import Data.Monoid (Monoid(..))
 
+-- | A monadic difference-list
 newtype DListT m a = DListT { runDListT :: ListT m a -> ListT m a }
 
 instance Monoid (DListT l a) where
@@ -42,6 +45,7 @@ instance Monad m => List (DListT m) m where
 instance MonadTrans DListT where
   lift = DListT . mappend . lift
 
+-- | Consume a 'DListT' with a 'ConsumerT'
 consume :: Monad m => ConsumerT a m b -> DListT m a -> m b
 consume c = evalConsumerT c . toListT
 

@@ -1,14 +1,16 @@
 {-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, RankNTypes, UndecidableInstances #-}
 
+-- | The 'List' class and actions for lists
+
 module Data.List.Class (
   -- | The List typeclass
   List (..),
   -- | List operations for MonadPlus
   cons, fromList, filter,
   -- | Standard list operations
-  takeWhile, genericTake, genericLength, scanl, sequence_,
+  takeWhile, genericTake, scanl, sequence_,
   -- | Non standard List operations
-  foldlL, toList, execute,
+  foldlL, toList, execute, lengthL,
   transformListMonad, convList, joinM
   ) where
 
@@ -17,12 +19,19 @@ import Control.Monad.Identity (Identity(..))
 import Control.Monad.ListT (ListT(..), foldrListT)
 import Prelude hiding (filter, takeWhile, sequence_, scanl)
 
+-- | A class for list types.
+-- Every list has an underlying monad.
 class (MonadPlus l, Monad m) => List l m | l -> m where
+  -- | Transform an action returning a list to the returned list
   joinL :: m (l b) -> l b
+  -- | foldr for 'List's.
+  -- the result and "right" values are monadic actions.
   foldrL :: (a -> m b -> m b) -> m b -> l a -> m b
   foldrL consFunc nilFunc = foldrL consFunc nilFunc . toListT
+  -- | Convert to a 'ListT'
   toListT :: l a -> ListT m a
   toListT = convList
+  -- | Convert from a 'ListT'
   fromListT :: ListT m a -> l a
   fromListT = convList
 
@@ -37,12 +46,15 @@ instance Monad m => List (ListT m) m where
   toListT = id
   fromListT = id
 
+-- | Prepend an item to a 'MonadPlus'
 cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return
 
-fromList :: (MonadPlus m) => [a] -> m a
+-- | Convert a list to a 'MonadPlus'
+fromList :: MonadPlus m => [a] -> m a
 fromList = foldr (mplus . return) mzero
 
+-- | Convert between list types
 convList :: (List l m, List k m) => l a -> k a
 convList =
   joinL . foldrL step (return mzero)
@@ -66,6 +78,7 @@ foldlL' joinVals atEnd step startVal =
     astep x rest = return $ (`t` rest) . (`step` x)
     t cur = joinVals cur . (`ap` return cur)
 
+-- | An action to do foldl for 'List's
 foldlL :: List l m => (a -> b -> a) -> a -> l b -> m a
 foldlL step startVal =
   foldlL' (const join) id astep (return startVal)
@@ -89,9 +102,11 @@ genericTake count
     joinStep (Just (1, x)) = const $ return x
     joinStep (Just (_, x)) = cons x . joinL
 
+-- | Execute the monadic actions in a 'List'
 execute :: List l m => l a -> m ()
 execute = foldlL const ()
 
+-- | Transform a list of actions to a list of their results
 joinM :: List l m => l (m a) -> l a
 joinM =
   joinL . foldrL consFunc (return mzero)
@@ -111,15 +126,18 @@ takeWhile cond =
       | cond x = return . cons x . joinL
       | otherwise = const $ return mzero
 
+-- | An action to transform a 'List' to a list
 toList :: List l m => l a -> m [a]
 toList =
   foldrL step $ return []
   where
     step = liftM . (:)
 
-genericLength :: (Integral i, List l m) => l a -> m i
-genericLength = foldlL (const . (+ 1)) 0
+-- | Consume a list (execute its actions) and return its length
+lengthL :: (Integral i, List l m) => l a -> m i
+lengthL = foldlL (const . (+ 1)) 0
 
+-- | Transform the underlying monad of a list given a way to transform the monad
 transformListMonad :: (List l m, List k s) =>
   (forall x. m x -> s x) -> l a -> k a
 transformListMonad trans =

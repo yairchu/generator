@@ -2,8 +2,9 @@
 
 -- Module is called ListT because List is taken by mtl
 
+-- | A list monad transformer / a monadic list.
+
 module Control.Monad.ListT (
-  -- | The ListT monad transformer
   ListItem(..), ListT(..), foldrListT
 ) where
 
@@ -22,6 +23,7 @@ data ListItem l a =
 
 data ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
 
+-- | foldr for ListT
 foldrListT :: Monad m => (a -> m b -> m b) -> m b -> ListT m a -> m b
 foldrListT consFunc nilFunc list = do
   item <- runListT list

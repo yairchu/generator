@@ -1,6 +1,6 @@
 Name:                generator
 Version:             0.0
-Synopsis:            Producers and Consumers. Like Python generator
+Synopsis:            A list monad transformer. An alternative to Lazy IO.
 License:             GPL
 Author:              Yair Chuchem
 Maintainer:          yairchu@gmail.com
