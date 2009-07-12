@@ -5,10 +5,10 @@
 -- A 'Producer []' is a tree.
 module Data.List.Tree (
   Tree, dfs, bfs, bfsLayers, bestFirstSearchOn,
-  bestFirstSearchSortedChildrenOn
+  prune, bestFirstSearchSortedChildrenOn
   ) where
 
-import Control.Monad (MonadPlus(..), join, liftM)
+import Control.Monad (MonadPlus(..), guard, join, liftM)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
   List(..), cons, foldlL, fromList, toList,
@@ -110,4 +110,21 @@ bestFirstSearchSortedChildrenOn ::
   (Ord o, Tree l k m) => (a -> o) -> l a -> k a
 bestFirstSearchSortedChildrenOn func =
   fromListT . search (mergeOnSortedHeads func) . toListTree
+
+joinM :: List l m => l (m a) -> l a
+joinM =
+  joinL . foldrL consFunc (return mzero)
+  where
+    consFunc action rest = do
+      x <- action
+      return . cons x . joinL $ rest
+
+prune :: Tree l k m => (a -> Bool) -> l a -> l a
+prune cond =
+  joinM . liftM r
+  where
+    r x = do
+      guard $ cond x
+      return x
+
 
