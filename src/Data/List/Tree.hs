@@ -11,8 +11,8 @@ module Data.List.Tree (
 import Control.Monad (MonadPlus(..), guard, join, liftM)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
-  List(..), cons, foldlL, fromList, toList,
-  transformListMonad)
+  List(..), cons, foldlL, fromList, joinM,
+  toList, transformListMonad)
 
 class (List l k, List k m) => Tree l k m
 instance (List l k, List k m) => Tree l k m
@@ -111,14 +111,6 @@ bestFirstSearchSortedChildrenOn ::
 bestFirstSearchSortedChildrenOn func =
   fromListT . search (mergeOnSortedHeads func) . toListTree
 
-joinM :: List l m => l (m a) -> l a
-joinM =
-  joinL . foldrL consFunc (return mzero)
-  where
-    consFunc action rest = do
-      x <- action
-      return . cons x . joinL $ rest
-
 prune :: Tree l k m => (a -> Bool) -> l a -> l a
 prune cond =
   joinM . liftM r
@@ -126,5 +118,4 @@ prune cond =
     r x = do
       guard $ cond x
       return x
-
 

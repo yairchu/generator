@@ -8,7 +8,8 @@ module Data.List.Class (
   -- | Standard list operations
   takeWhile, genericTake, genericLength, scanl, sequence_,
   -- | Non standard List operations
-  foldlL, toList, execute, transformListMonad, convList
+  foldlL, toList, execute,
+  transformListMonad, convList, joinM
   ) where
 
 import Control.Monad (MonadPlus(..), ap, join, liftM)
@@ -91,8 +92,16 @@ genericTake count
 execute :: List l m => l a -> m ()
 execute = foldlL const ()
 
+joinM :: List l m => l (m a) -> l a
+joinM =
+  joinL . foldrL consFunc (return mzero)
+  where
+    consFunc action rest = do
+      x <- action
+      return . cons x . joinL $ rest
+
 sequence_ :: List l m => l (m a) -> m ()
-sequence_ = foldrL (>>) (return ()) . liftM (>> return ())
+sequence_ = execute . joinM
 
 takeWhile :: List l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
