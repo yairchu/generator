@@ -86,15 +86,25 @@ mergeOnSortedHeads f list =
           Cons x xs ->
             cons x . mergeOnSortedHeads f $ bury xs yys
   where
-    bury = undefined
-{-    
-    -- need to translate this part
-    bury a ([] : b) = bury a b
-    bury (a : as) ((b : bs) : bss)
-      | f a <= f b = (a : as) : (b : bs) : bss
-      | otherwise = (b : bs) : bury (a : as) bss
-    bury a b = a : b -- one of them is []
--}
+    bury xx yyy =
+      joinL $ do
+        yyi <- runListT yyy
+        case yyi of
+          Nil -> return $ return xx
+          Cons yy yys -> do
+            yi <- runListT yy
+            case yi of
+              Nil -> return $ bury xx yys
+              Cons y ys -> do
+                let
+                  sameYs = cons y ys
+                  sameYys = cons sameYs yys
+                xi <- runListT xx
+                return $ case xi of
+                  Nil -> sameYys
+                  Cons x xs
+                    | f x <= f y -> cons (cons x xs) sameYys
+                    | otherwise -> cons sameYs $ cons (cons x xs) yys
 
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
