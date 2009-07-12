@@ -36,15 +36,15 @@ transpose matrix =
       cons (fromList (map headL items)) .
       joinL . r $ map tailL items
 
-treeToListTree :: Tree l k m => l a -> ListT (ListT m) a
-treeToListTree = transformListMonad toListT
+toListTree :: Tree l k m => l a -> ListT (ListT m) a
+toListTree = transformListMonad toListT
 
 -- | Transform a tree into lists of the items in its different layers
 bfsLayers :: Tree l k m => l a -> k (k a)
 bfsLayers =
   fromListT . liftM fromListT .
   search (liftM join . transpose) . liftM return .
-  treeToListTree
+  toListTree
 
 -- | Flatten a tree in BFS order. (Breadth First Search)
 bfs :: Tree l k m => l a -> k a
@@ -70,23 +70,24 @@ mergeOn f =
 bestFirstSearchOn ::
   (Ord b, Tree l k m) => (a -> b) -> l a -> k a
 bestFirstSearchOn func =
-  fromListT . search (mergeOn func) . treeToListTree
+  fromListT . search (mergeOn func) . toListTree
 
 mergeOnSortedHeads ::
-  Ord b => (a -> b) -> [[a]] -> [a]
-mergeOnSortedHeads f list = undefined f list
-{-
+  (Ord b, Monad m) => (a -> b) -> ListT m (ListT m a) -> ListT m a
+mergeOnSortedHeads f list =
   joinL $ do
-    item <- unCons list
+    item <- runListT list
     case item of
       Nil -> return mzero
       Cons xx yys -> do
-        xi <- unCons xx
+        xi <- runListT xx
         return $ case xi of
           Nil -> mergeOnSortedHeads f yys
           Cons x xs ->
             cons x . mergeOnSortedHeads f $ bury xs yys
   where
+    bury = undefined
+{-    
     -- need to translate this part
     bury a ([] : b) = bury a b
     bury (a : as) ((b : bs) : bss)
@@ -98,7 +99,7 @@ mergeOnSortedHeads f list = undefined f list
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
 bestFirstSearchSortedChildrenOn ::
-  (Ord o, List l []) => (a -> o) -> l a -> [a]
-bestFirstSearchSortedChildrenOn =
-  search . mergeOnSortedHeads
+  (Ord o, Tree l k m) => (a -> o) -> l a -> k a
+bestFirstSearchSortedChildrenOn func =
+  fromListT . search (mergeOnSortedHeads func) . toListTree
 
