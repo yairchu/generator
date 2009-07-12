@@ -19,14 +19,19 @@ import Prelude hiding (filter, takeWhile, sequence_, scanl)
 class (MonadPlus l, Monad m) => List l m | l -> m where
   joinL :: m (l b) -> l b
   foldrL :: (a -> m b -> m b) -> m b -> l a -> m b
+  foldrL consFunc nilFunc = foldrL consFunc nilFunc . toListT
+  toListT :: l a -> ListT m a
+  toListT = convList
 
 instance List [] Identity where
   joinL = runIdentity
   foldrL = foldr
+  toListT = fromList
 
 instance Monad m => List (ListT m) m where
   joinL = ListT . (>>= runListT)
   foldrL = foldrListT
+  toListT = id
 
 cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return

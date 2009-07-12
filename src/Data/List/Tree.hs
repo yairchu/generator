@@ -25,7 +25,7 @@ dfs = search join
 
 transpose :: List l m => l (l v) -> l (l v)
 transpose matrix =
-  joinL $ toList (liftM convList matrix) >>= r
+  joinL $ toList (liftM toListT matrix) >>= r
   where
     r = liftM t . mapM runListT
     t items =
