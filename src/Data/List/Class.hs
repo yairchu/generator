@@ -27,6 +27,9 @@ import Prelude hiding (
 -- Every list has an underlying monad.
 class (MonadPlus l, Monad m) => List l m | l -> m where
   -- | Transform an action returning a list to the returned list
+  --
+  -- > > joinL $ Identity "hello"
+  -- > "hello"
   joinL :: m (l b) -> l b
   -- | foldr for 'List's.
   -- the result and "right" values are monadic actions.
@@ -55,6 +58,11 @@ cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return
 
 -- | Convert a list to a 'MonadPlus'
+--
+-- > > fromList [] :: Maybe Int
+-- > Nothing
+-- > > fromList [5] :: Maybe Int
+-- > Just 5
 fromList :: MonadPlus m => [a] -> m a
 fromList = foldr (mplus . return) mzero
 
@@ -65,6 +73,10 @@ convList =
   where
     step x = return . cons x . joinL
 
+-- | 'filter' works for any MonadPlus.
+--
+-- > > filter (> 5) (Just 3)
+-- > Nothing
 filter :: MonadPlus m => (a -> Bool) -> m a -> m a
 filter cond =
   (>>= f)
@@ -111,6 +123,9 @@ execute :: List l m => l a -> m ()
 execute = foldlL const ()
 
 -- | Transform a list of actions to a list of their results
+--
+-- > > joinM [Identity 4, Identity 7]
+-- > [4,7]
 joinM :: List l m => l (m a) -> l a
 joinM =
   joinL . foldrL consFunc (return mzero)

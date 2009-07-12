@@ -1,7 +1,21 @@
 {-# OPTIONS -O2 -Wall #-}
 
--- | A monad transformer for the creation of 'List's.
+-- | A monad transformer for the creation of Lists.
 -- Similar to Python's generators.
+--
+-- > import Data.List.Class (convList)
+-- >
+-- > blah 0 = mempty
+-- > blah i =
+-- >   produce $ do
+-- >     let t = blah (i - 1)
+-- >     yields t
+-- >     yield i
+-- >     yields t
+-- >
+-- > > convList (blah 4) :: [Int]
+-- > [1,2,1,3,1,2,1,4,1,2,1,3,1,2,1]
+--
 
 module Control.Monad.Generator (
   GeneratorT, produce, yield, yields
