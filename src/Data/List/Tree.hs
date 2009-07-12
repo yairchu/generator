@@ -104,7 +104,7 @@ mergeOnSortedHeads f list =
                   Nil -> sameYys
                   Cons x xs
                     | f x <= f y -> cons (cons x xs) sameYys
-                    | otherwise -> cons sameYs $ cons (cons x xs) yys
+                    | otherwise -> cons sameYs $ bury (cons x xs) yys
 
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
