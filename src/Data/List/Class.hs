@@ -6,7 +6,7 @@ module Data.List.Class (
   -- | The List typeclass
   List (..),
   -- | List operations for MonadPlus
-  cons, fromList, filter, filterM,
+  cons, fromList, filter,
   -- | Standard list operations
   takeWhile, genericTake, scanl, sequence_,
   -- | Non standard List operations
@@ -68,16 +68,6 @@ filter cond =
     f x
       | cond x = return x
       | otherwise = mzero
-
--- | Filter where the condition function returns a monadic action
--- whose result determines which items stay.
-filterM :: MonadPlus m => (a -> m Bool) -> m a -> m a
-filterM cond =
-  (>>= f)
-  where
-    f x = do
-      b <- cond x
-      if b then return x else mzero
 
 -- for foldlL and scanl
 foldlL' :: List l m =>
