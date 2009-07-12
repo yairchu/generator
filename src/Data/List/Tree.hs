@@ -27,7 +27,7 @@ transpose :: List l m => l (l v) -> l (l v)
 transpose matrix =
   joinL $ toList (liftM convList matrix) >>= r
   where
-    r = liftM t . mapM runListT'
+    r = liftM t . mapM runListT
     t items =
       cons (fromList (map headL items)) .
       joinL . r $ map tailL items
@@ -46,8 +46,8 @@ mergeOn f =
   where
     merge2 xx yy =
       joinL $ do
-        xi <- runListT' xx
-        yi <- runListT' yy
+        xi <- runListT xx
+        yi <- runListT yy
         return $ case (xi, yi) of
           (Cons x xs, Cons y ys)
             | f y > f x -> cons x . merge2 xs $ cons y ys

@@ -4,9 +4,7 @@
 
 module Control.Monad.ListT (
   -- | The ListT monad transformer
-  ListItem(..), ListT(..),
-  -- | Compatability with mtl's ListT
-  runListT, mapListT
+  ListItem(..), ListT(..), foldrListT
 ) where
 
 import Control.Applicative (Applicative(..))
@@ -16,23 +14,28 @@ import Control.Monad.Error.Class (MonadError(..))
 import Control.Monad.Reader.Class (MonadReader(..))
 import Control.Monad.State.Class (MonadState(..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
-import Data.List.Class (List(..), fromList, toList)
 import Data.Monoid (Monoid(..))
 
 data ListItem l a =
   Nil |
   Cons { headL :: a, tailL :: l a }
 
--- runListT' called this way because am implementing mtl's runListT
-data ListT m a = ListT { runListT' :: m (ListItem (ListT m) a) }
+data ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
+
+foldrListT :: Monad m => (a -> m b -> m b) -> m b -> ListT m a -> m b
+foldrListT consFunc nilFunc list = do
+  item <- runListT list
+  case item of
+    Nil -> nilFunc
+    Cons x xs -> consFunc x $ foldrListT consFunc nilFunc xs
 
 -- for mappend, fmap, bind
-foldrL' :: Monad m =>
+foldrListT' :: Monad m =>
   (a -> ListT m b -> ListT m b) -> ListT m b -> ListT m a -> ListT m b
-foldrL' consFunc nilFunc =
-  ListT . foldrL step (runListT' nilFunc)
+foldrListT' consFunc nilFunc =
+  ListT . foldrListT step (runListT nilFunc)
   where
-    step x = runListT' . consFunc x . ListT
+    step x = runListT . consFunc x . ListT
 
 -- like generic cons except using that one
 -- would cause an infinite loop
@@ -41,14 +44,14 @@ cons x = ListT . return . Cons x
 
 instance Monad m => Monoid (ListT m a) where
   mempty = ListT $ return Nil
-  mappend = flip (foldrL' cons)
+  mappend = flip (foldrListT' cons)
 
 instance Monad m => Functor (ListT m) where
-  fmap func = foldrL' (cons . func) mempty
+  fmap func = foldrListT' (cons . func) mempty
 
 instance Monad m => Monad (ListT m) where
   return = ListT . return . (`Cons` mempty)
-  a >>= b = foldrL' mappend mempty $ fmap b a
+  a >>= b = foldrListT' mappend mempty $ fmap b a
 
 instance Monad m => Applicative (ListT m) where
   pure = return
@@ -60,22 +63,6 @@ instance Monad m => MonadPlus (ListT m) where
 
 instance MonadTrans ListT where
   lift = ListT . liftM (`Cons` mempty)
-
-instance Monad m => List (ListT m) m where
-  joinL = ListT . (>>= runListT')
-  foldrL consFunc nilFunc list = do
-    item <- runListT' list
-    case item of
-      Nil -> nilFunc
-      Cons x xs -> consFunc x $ foldrL consFunc nilFunc xs
-
--- | Acronym for toList for compatability with mtl's ListT
-runListT :: Monad m => ListT m a -> m [a]
-runListT = toList
-
--- | An extremely odd function implemented in mtl's ListT
-mapListT :: (Monad m, Monad n) => (m [a] -> n [b]) -> ListT m a -> ListT n b
-mapListT f = joinL . liftM fromList . f . runListT
 
 -- YUCK:
 -- I can't believe I'm doing this,
@@ -91,16 +78,16 @@ instance MonadCont m => MonadCont (ListT m) where
   callCC f =
     ListT $ callCC thing
     where
-      thing c = runListT' . f $ ListT . c . (`Cons` mempty)
+      thing c = runListT . f $ ListT . c . (`Cons` mempty)
 -}
 
 instance MonadError e m => MonadError e (ListT m) where
   throwError = lift . throwError
-  catchError m = ListT . catchError (runListT' m) . (runListT' .)
+  catchError m = ListT . catchError (runListT m) . (runListT .)
 
 instance MonadReader s m => MonadReader s (ListT m) where
   ask = lift ask
-  local f = ListT . local f . runListT'
+  local f = ListT . local f . runListT
 
 instance MonadState s m => MonadState s (ListT m) where
   get = lift get

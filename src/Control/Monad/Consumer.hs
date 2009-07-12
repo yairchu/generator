@@ -38,7 +38,7 @@ next :: Monad m => ConsumerT v m (Maybe v)
 next =
   ConsumerT . runMaybeT $ do
   list <- MaybeT get
-  item <- lift . lift $ runListT' list
+  item <- lift . lift $ runListT list
   case item of
     Nil -> do
       lift putNoProducer

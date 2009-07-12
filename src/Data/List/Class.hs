@@ -13,6 +13,7 @@ module Data.List.Class (
 
 import Control.Monad (MonadPlus(..), ap, join, liftM)
 import Control.Monad.Identity (Identity(..))
+import Control.Monad.ListT (ListT(..), foldrListT)
 import Prelude hiding (filter, takeWhile, sequence_, scanl)
 
 class (MonadPlus l, Monad m) => List l m | l -> m where
@@ -22,6 +23,10 @@ class (MonadPlus l, Monad m) => List l m | l -> m where
 instance List [] Identity where
   joinL = runIdentity
   foldrL = foldr
+
+instance Monad m => List (ListT m) m where
+  joinL = ListT . (>>= runListT)
+  foldrL = foldrListT
 
 cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return
