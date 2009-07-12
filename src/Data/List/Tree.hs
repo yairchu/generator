@@ -3,6 +3,25 @@
 
 -- | Functions for iterating trees.
 -- A 'List' whose underlying monad is also a 'List' is a tree.
+--
+-- > import Data.List.Class (genericTake)
+-- >
+-- > bits = t ""
+-- > t prev =
+-- >   produce $ do
+-- >     yield prev
+-- >     x <- lift "01"
+-- >     yields $ t (prev ++ [x])
+-- >
+-- > > take 3 (bfsLayers bits)
+-- > [[""],["0","1"],["00","01","10","11"]]
+-- >
+-- > > take 10 (bfs bits)
+-- > ["","0","1","00","01","10","11","000","001","010"]
+-- >
+-- > > dfs (genericTake 3 bits)
+-- > ["","0","00","01","1","10","11"]
+--
 module Data.List.Tree (
   Tree, dfs, bfs, bfsLayers, bestFirstSearchOn,
   prune, bestFirstSearchSortedChildrenOn
