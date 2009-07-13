@@ -1,5 +1,6 @@
 Name:                generator
 Version:             0.5
+Category:            Control
 Synopsis:            A list monad transformer and related functions.
 Description:
     A list monad transformer and a generic List class.
