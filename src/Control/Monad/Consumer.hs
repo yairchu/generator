@@ -1,5 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
-
 -- | A monad transformer for the [partial] consumption of 'List's.
 -- The interface closely mimics iterators in languages such as Python.
 module Control.Monad.Consumer (

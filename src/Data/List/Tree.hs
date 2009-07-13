@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
 
 -- | Functions for iterating trees.

@@ -1,7 +1,18 @@
 Name:                generator
-Version:             0.0
-Synopsis:            A list monad transformer. An alternative to Lazy IO.
-License:             GPL
+Version:             0.5
+Synopsis:            A list monad transformer and related functions.
+Description:
+    A list monad transformer and a generic List class.
+
+    Consumer and Generator monad transformers to create
+    and iterate 'ListT's in a manner similar to
+    Python generators.
+
+    A Tree module for searching and pruning
+    trees expressed as 'List's whose underlying monad
+    is also a List.
+License:             BSD3
+License-file:        LICENSE
 Author:              Yair Chuchem
 Maintainer:          yairchu@gmail.com
 Cabal-Version:       >= 1.2
@@ -11,11 +22,18 @@ Build-type:          Simple
 Library
   hs-Source-Dirs:      src
   Extensions:
-  Build-Depends:       base, haskell98, mtl, MaybeT
+  Build-Depends:       base, mtl, MaybeT
   Exposed-modules:     Control.Monad.ListT,
                        Control.Monad.DList,
                        Control.Monad.Consumer,
                        Control.Monad.Generator,
                        Data.List.Class,
                        Data.List.Tree
-  ghc-options:         -Wall
+  Ghc-Options:         -O2 -Wall
+  Extensions:          FlexibleContexts,
+                       FlexibleInstances,
+                       FunctionalDependencies,
+                       MultiParamTypeClasses,
+                       RankNTypes,
+                       UndecidableInstances
+

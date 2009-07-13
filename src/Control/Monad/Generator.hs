@@ -1,5 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
-
 -- | A monad transformer for the creation of Lists.
 -- Similar to Python's generators.
 --
