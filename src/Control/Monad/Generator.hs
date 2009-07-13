@@ -7,7 +7,7 @@
 -- >
 -- > blah 0 = mempty
 -- > blah i =
--- >   produce $ do
+-- >   generate $ do
 -- >     let t = blah (i - 1)
 -- >     yields t
 -- >     yield i
@@ -18,7 +18,7 @@
 --
 
 module Control.Monad.Generator (
-  GeneratorT, produce, yield, yields
+  GeneratorT, generate, yield, yields
   ) where
 
 import Control.Applicative (Applicative(..))
@@ -30,7 +30,7 @@ import Data.List.Class (cons, joinL)
 import Data.Monoid (Monoid(..))
 
 -- | A monad transformer to create 'List's.
--- 'produce' transforms a "GeneratorT v m a" to a "DListT m a".
+-- 'generate' transforms a "GeneratorT v m a" to a "DListT m a".
 newtype GeneratorT v m a =
   GeneratorT { runGeneratorT :: Cont (DListT m v) a }
 
@@ -53,8 +53,8 @@ instance MonadIO m => MonadIO (GeneratorT v m) where
   liftIO = lift . liftIO
 
 -- | /O(1)/, Transform a GeneratorT to a 'DListT'
-produce :: Monad m => GeneratorT v m () -> DListT m v
-produce = ($ const mempty) . runCont . runGeneratorT
+generate :: Monad m => GeneratorT v m () -> DListT m v
+generate = ($ const mempty) . runCont . runGeneratorT
 
 -- | /O(1)/, Output a result value
 yield :: Monad m => v -> GeneratorT v m ()

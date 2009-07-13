@@ -11,9 +11,9 @@ module Data.List.Class (
   takeWhile, genericTake, scanl,
   sequence_, zip, zipWith,
   -- | Non standard List operations
-  foldlL, toList, execute, lengthL,
-  transformListMonad, convList, joinM,
-  liftListMonad
+  foldlL, toList, execute, lengthL, joinM, lastL,
+  -- | Convert between List types
+  convList, transformListMonad, liftListMonad
   ) where
 
 import Control.Monad (MonadPlus(..), ap, join, liftM)
@@ -32,13 +32,17 @@ class (MonadPlus l, Monad m) => List l m | l -> m where
   -- > "hello"
   joinL :: m (l b) -> l b
   -- | foldr for 'List's.
-  -- the result and "right" values are monadic actions.
+  -- the result and 'right side' values are monadic actions.
   foldrL :: (a -> m b -> m b) -> m b -> l a -> m b
   foldrL consFunc nilFunc = foldrL consFunc nilFunc . toListT
-  -- | Convert to a 'ListT'
+  -- | Convert to a 'ListT'.
+  --
+  -- Can be done with a foldrL but included in type-class for efficiency.
   toListT :: l a -> ListT m a
   toListT = convList
-  -- | Convert from a 'ListT'
+  -- | Convert from a 'ListT'.
+  --
+  -- Can be done with a foldrL but included in type-class for efficiency.
   fromListT :: ListT m a -> l a
   fromListT = convList
 
@@ -66,14 +70,14 @@ cons = mplus . return
 fromList :: MonadPlus m => [a] -> m a
 fromList = foldr (mplus . return) mzero
 
--- | Convert between list types
+-- | Convert between lists with the same underlying monad
 convList :: (List l m, List k m) => l a -> k a
 convList =
   joinL . foldrL step (return mzero)
   where
     step x = return . cons x . joinL
 
--- | 'filter' works for any MonadPlus.
+-- | filter for any MonadPlus
 --
 -- > > filter (> 5) (Just 3)
 -- > Nothing
@@ -146,6 +150,9 @@ takeWhile cond =
       | otherwise = const $ return mzero
 
 -- | An action to transform a 'List' to a list
+--
+-- > > runIdentity $ toList "hello!"
+-- > "hello!"
 toList :: List l m => l a -> m [a]
 toList =
   foldrL step $ return []
@@ -153,10 +160,17 @@ toList =
     step = liftM . (:)
 
 -- | Consume a list (execute its actions) and return its length
+--
+-- > > runIdentity $ lengthL [1,2,3]
+-- > 3
 lengthL :: (Integral i, List l m) => l a -> m i
 lengthL = foldlL (const . (+ 1)) 0
 
 -- | Transform the underlying monad of a list given a way to transform the monad
+--
+-- > > import Data.List.Tree (bfs)
+-- > > bfs (transformListMonad (\(Identity x) -> [x, x]) "hey" :: ListT [] Char)
+-- > "hheeeeyyyyyyyy"
 transformListMonad :: (List l m, List k s) =>
   (forall x. m x -> s x) -> l a -> k a
 transformListMonad trans =
@@ -176,20 +190,30 @@ liftListMonad = transformListMonad lift
 
 zip :: List l m => l a -> l b -> l (a, b)
 zip as bs =
-  r (toListT as) (toListT bs)
+  r0 (toListT as) (toListT bs)
   where
-    r xx yy =
+    r0 xx yy =
       joinL $ do
         xi <- runListT xx
         case xi of
           Nil -> return mzero
-          Cons x xs -> do
-            yi <- runListT yy
-            return $ case yi of
-              Nil -> mzero
-              Cons y ys ->
-                cons (x, y) $ r xs ys
+          Cons x xs -> r1 x xs yy
+    r1 x xs yy = do
+      yi <- runListT yy
+      return $ case yi of
+        Nil -> mzero
+        Cons y ys ->
+          cons (x, y) $ r0 xs ys
 
+-- zipWith based on zip and not vice versa,
+-- because the other way around hlint compains "use zip".
 zipWith :: List l m => (a -> b -> c) -> l a -> l b -> l c
 zipWith func as = liftM (uncurry func) . zip as
+
+-- | Consume all items and return the last one
+--
+-- > > runIdentity $ lastL "hello"
+-- > 'o'
+lastL :: List l m => l a -> m a
+lastL = foldlL (const id) undefined
 

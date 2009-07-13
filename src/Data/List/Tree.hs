@@ -4,11 +4,16 @@
 -- | Functions for iterating trees.
 -- A 'List' whose underlying monad is also a 'List' is a tree.
 --
--- > import Data.List.Class (genericTake)
+-- It's nodes are accessible, in contrast to the list monad,
+-- which can also be seen as a tree, except only its leafs
+-- are accessible and only in "dfs order".
+--
+-- > import Control.Monad.Generator
+-- > import Data.List.Class (genericTake, takeWhile, toList, lastL)
 -- >
 -- > bits = t ""
 -- > t prev =
--- >   produce $ do
+-- >   generate $ do
 -- >     yield prev
 -- >     x <- lift "01"
 -- >     yields $ t (prev ++ [x])
@@ -19,8 +24,22 @@
 -- > > take 10 (bfs bits)
 -- > ["","0","1","00","01","10","11","000","001","010"]
 -- >
--- > > dfs (genericTake 3 bits)
--- > ["","0","00","01","1","10","11"]
+-- > > dfs (genericTake 4 bits)
+-- > ["","0","00","000","001","01","010","011","1","10","100","101","11","110","111"]
+-- >
+-- > > toList $ genericTake 3 bits
+-- > [["","0","00"],["","0","01"],["","1","10"],["","1","11"]]
+--
+-- Examples of pruning with 'prune' and 'takeWhile':
+--
+-- > > dfs . takeWhile (not . isSuffixOf "11") $ genericTake 4 bits
+-- > ["","0","00","000","001","01","010","1","10","100","101"]
+-- >
+-- > > lastL . takeWhile (not . isSuffixOf "11") $ genericTake 4 bits
+-- > ["000","001","010","01","100","101","1"]
+-- >
+-- > > lastL . prune (not . isSuffixOf "11") $ genericTake 4 bits
+-- > ["000","001","010","100","101"]
 --
 module Data.List.Tree (
   Tree, dfs, bfs, bfsLayers, bestFirstSearchOn,
@@ -33,6 +52,7 @@ import Data.List.Class (
   List(..), cons, foldlL, fromList, joinM,
   toList, transformListMonad)
 
+-- | A 'type-class synonym' for Trees.
 class (List l k, List k m) => Tree l k m
 instance (List l k, List k m) => Tree l k m
 
@@ -50,10 +70,15 @@ transpose :: Monad m => ListT m (ListT m v) -> ListT m (ListT m v)
 transpose matrix =
   joinL $ toList matrix >>= r
   where
-    r = liftM t . mapM runListT
-    t items =
-      cons (fromList (map headL items)) .
-      joinL . r $ map tailL items
+    r xs = do
+      items <- mapM runListT xs
+      return $ case filter isCons items of
+        [] -> mzero
+        citems ->
+          cons (fromList (map headL citems)) .
+          joinL . r $ map tailL citems
+    isCons Nil = False
+    isCons _ = True
 
 toListTree :: Tree l k m => l a -> ListT (ListT m) a
 toListTree = transformListMonad toListT
