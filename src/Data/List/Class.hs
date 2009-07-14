@@ -6,12 +6,13 @@ module Data.List.Class (
   -- | The List typeclass
   List (..),
   -- | List operations for MonadPlus
-  cons, fromList, filter,
+  cons, fromList, filter, repeat,
   -- | Standard list operations
   takeWhile, genericTake, scanl,
-  sequence_, zip, zipWith,
+  sequence, sequence_, transpose,
+  zip, zipWith,
   -- | Non standard List operations
-  foldlL, toList, execute, lengthL, joinM, lastL,
+  foldlL, toList, execute, lengthL, lastL,
   -- | Convert between List types
   convList, transformListMonad, liftListMonad
   ) where
@@ -20,8 +21,9 @@ import Control.Monad (MonadPlus(..), ap, join, liftM)
 import Control.Monad.Identity (Identity(..))
 import Control.Monad.ListT (ListT(..), ListItem(..), foldrListT)
 import Control.Monad.Trans (MonadTrans(..))
+import Data.Function (fix)
 import Prelude hiding (
-  filter, takeWhile, sequence_, scanl, zip, zipWith)
+  filter, repeat, scanl, sequence, sequence_, takeWhile, zip, zipWith)
 
 -- | A class for list types.
 -- Every list has an underlying monad.
@@ -126,20 +128,16 @@ genericTake count
 execute :: List l m => l a -> m ()
 execute = foldlL const ()
 
--- | Transform a list of actions to a list of their results
---
--- > > joinM [Identity 4, Identity 7]
--- > [4,7]
-joinM :: List l m => l (m a) -> l a
-joinM =
-  joinL . foldrL consFunc (return mzero)
+sequence :: List l m => l (m a) -> m (l a)
+sequence =
+  foldrL consFunc (return mzero)
   where
     consFunc action rest = do
       x <- action
       return . cons x . joinL $ rest
 
 sequence_ :: List l m => l (m a) -> m ()
-sequence_ = execute . joinM
+sequence_ = execute . joinL . sequence
 
 takeWhile :: List l m => (a -> Bool) -> l a -> l a
 takeWhile cond =
@@ -216,4 +214,21 @@ zipWith func as = liftM (uncurry func) . zip as
 -- > 'o'
 lastL :: List l m => l a -> m a
 lastL = foldlL (const id) undefined
+
+repeat :: MonadPlus m => a -> m a
+repeat = fix . cons
+
+transpose :: List l m => l (l a) -> l (l a)
+transpose matrix =
+  joinL $ toList matrix >>= r . map toListT
+  where
+    r xs = do
+      items <- mapM runListT xs
+      return $ case filter isCons items of
+        [] -> mzero
+        citems ->
+          cons (fromList (map headL citems)) .
+          joinL . r $ map tailL citems
+    isCons Nil = False
+    isCons _ = True
 

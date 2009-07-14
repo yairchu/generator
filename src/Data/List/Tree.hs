@@ -48,8 +48,9 @@ module Data.List.Tree (
 import Control.Monad (MonadPlus(..), guard, join, liftM)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
-  List(..), cons, foldlL, fromList, joinM,
-  toList, transformListMonad)
+  List(..), cons, foldlL, sequence,
+  transformListMonad, transpose)
+import Prelude hiding (sequence)
 
 -- | A 'type-class synonym' for Trees.
 class (List l k, List k m) => Tree l k m
@@ -64,20 +65,6 @@ search merge =
 -- | Iterate a tree in DFS pre-order. (Depth First Search)
 dfs :: (List l m, MonadPlus m) => l a -> m a
 dfs = search join
-
-transpose :: Monad m => ListT m (ListT m v) -> ListT m (ListT m v)
-transpose matrix =
-  joinL $ toList matrix >>= r
-  where
-    r xs = do
-      items <- mapM runListT xs
-      return $ case filter isCons items of
-        [] -> mzero
-        citems ->
-          cons (fromList (map headL citems)) .
-          joinL . r $ map tailL citems
-    isCons Nil = False
-    isCons _ = True
 
 toListTree :: Tree l k m => l a -> ListT (ListT m) a
 toListTree = transformListMonad toListT
@@ -159,7 +146,7 @@ bestFirstSearchSortedChildrenOn func =
 -- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
 prune :: (List l m, MonadPlus m) => (a -> Bool) -> l a -> l a
 prune cond =
-  joinM . liftM r
+  joinL . sequence . liftM r
   where
     r x = do
       guard $ cond x
