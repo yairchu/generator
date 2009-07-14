@@ -24,7 +24,7 @@ Build-type:          Simple
 Library
   hs-Source-Dirs:      src
   Extensions:
-  Build-Depends:       base, mtl, MaybeT
+  Build-Depends:       base >= 3 && < 5, mtl, MaybeT
   Exposed-modules:     Control.Monad.ListT,
                        Control.Monad.DList,
                        Control.Monad.Consumer,
