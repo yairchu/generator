@@ -1,10 +1,14 @@
 -- | A monad transformer for the [partial] consumption of 'List's.
 -- The interface closely mimics iterators in languages such as Python.
+--
+-- It is often nicer to avoid using Consumer and to use
+-- folds and higher-order functions instead.
 module Control.Monad.Consumer (
   ConsumerT, evalConsumerT, next, consumeRestM
   ) where
 
-import Control.Monad (MonadPlus(..))
+import Control.Applicative (Applicative(..))
+import Control.Monad (MonadPlus(..), ap)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Control.Monad.Maybe (MaybeT(..))
 import Control.Monad.State (StateT, evalStateT, get, put)
@@ -15,10 +19,17 @@ import Data.Maybe (fromMaybe)
 -- | A monad tranformer for consuming 'List's.
 newtype ConsumerT v m a = ConsumerT { runConsumerT :: StateT (Maybe (ListT m v)) m a }
 
+instance Monad m => Functor (ConsumerT v m) where
+  fmap f = ConsumerT . fmap f . runConsumerT
+
 instance Monad m => Monad (ConsumerT v m) where
   return = ConsumerT . return
   fail = ConsumerT . fail
   a >>= b = ConsumerT $ runConsumerT a >>= runConsumerT . b
+
+instance Monad m => Applicative (ConsumerT v m) where
+  pure = return
+  (<*>) = ap
 
 instance MonadTrans (ConsumerT v) where
   lift = ConsumerT . lift
