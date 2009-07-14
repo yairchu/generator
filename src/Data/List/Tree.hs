@@ -48,9 +48,8 @@ module Data.List.Tree (
 import Control.Monad (MonadPlus(..), guard, join, liftM)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
-  List(..), cons, foldlL, sequence,
+  List(..), cons, foldlL, joinM,
   transformListMonad, transpose)
-import Prelude hiding (sequence)
 
 -- | A 'type-class synonym' for Trees.
 class (List l k, List k m) => Tree l k m
@@ -146,7 +145,7 @@ bestFirstSearchSortedChildrenOn func =
 -- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
 prune :: (List l m, MonadPlus m) => (a -> Bool) -> l a -> l a
 prune cond =
-  joinL . sequence . liftM r
+  joinM . liftM r
   where
     r x = do
       guard $ cond x

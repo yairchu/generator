@@ -9,10 +9,9 @@ module Data.List.Class (
   cons, fromList, filter, repeat,
   -- | Standard list operations
   takeWhile, genericTake, scanl,
-  sequence, sequence_, transpose,
-  zip, zipWith,
+  transpose, zip, zipWith,
   -- | Non standard List operations
-  foldlL, toList, execute, lengthL, lastL,
+  foldlL, toList, execute, joinM, lengthL, lastL,
   -- | Convert between List types
   convList, transformListMonad, liftListMonad
   ) where
@@ -23,7 +22,7 @@ import Control.Monad.ListT (ListT(..), ListItem(..), foldrListT)
 import Control.Monad.Trans (MonadTrans(..))
 import Data.Function (fix)
 import Prelude hiding (
-  filter, repeat, scanl, sequence, sequence_, takeWhile, zip, zipWith)
+  filter, repeat, scanl, takeWhile, zip, zipWith)
 
 -- | A class for list types.
 -- Every list has an underlying monad.
@@ -128,16 +127,17 @@ genericTake count
 execute :: List l m => l a -> m ()
 execute = foldlL const ()
 
-sequence :: List l m => l (m a) -> m (l a)
-sequence =
-  foldrL consFunc (return mzero)
+-- | Transform a list of actions to a list of their results
+--
+-- > > joinM [Identity 4, Identity 7]
+-- > [4,7]
+joinM :: List l m => l (m a) -> l a
+joinM =
+  joinL . foldrL consFunc (return mzero)
   where
     consFunc action rest = do
       x <- action
       return . cons x . joinL $ rest
-
-sequence_ :: List l m => l (m a) -> m ()
-sequence_ = execute . joinL . sequence
 
 takeWhile :: List l m => (a -> Bool) -> l a -> l a
 takeWhile cond =

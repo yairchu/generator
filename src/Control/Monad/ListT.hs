@@ -8,18 +8,16 @@
 --   A program which reads numbers from the user and accumulates them.
 --
 -- > import Control.Monad.ListT (ListT)
--- > import Data.List.Class (joinL, repeat, scanl, sequence, sequence_, takeWhile)
--- > import Prelude hiding (repeat, scanl, sequence, sequence_, takeWhile)
+-- > import Data.List.Class (execute, joinM, repeat, scanl, takeWhile)
+-- > import Prelude hiding (repeat, scanl, takeWhile)
 -- >
 -- > main =
--- >   sequence_ .
--- >   fmap print .
+-- >   execute . joinM . fmap print .
 -- >   scanl (+) 0 .
 -- >   fmap (fst . head) .
 -- >   takeWhile (not . null) .
 -- >   fmap reads .
--- >   joinL . sequence $
--- >   (repeat getLine :: ListT IO (IO String))
+-- >   joinM $ (repeat getLine :: ListT IO (IO String))
 
 module Control.Monad.ListT (
   ListItem(..), ListT(..), foldrListT
