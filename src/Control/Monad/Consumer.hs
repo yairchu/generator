@@ -52,7 +52,7 @@ next =
 
 -- | Return an instance of the underlying monad that will use the given 'ConsumerT' to consume the remaining values.
 -- After this action there are no more items to consume (they belong to the given ConsumerT now)
-consumeRestM :: List l m => ConsumerT a m b -> ConsumerT a m (m b)
+consumeRestM :: Monad m => ConsumerT a m b -> ConsumerT a m (m b)
 consumeRestM consume =
   ConsumerT $ do
     mRest <- get
