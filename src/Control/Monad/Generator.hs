@@ -3,16 +3,15 @@
 --
 -- > import Data.List.Class (convList)
 -- >
--- > blah 0 = mempty
--- > blah i =
+-- > hanoi 0 _ _ _ = mempty
+-- > hanoi n from to other =
 -- >   generate $ do
--- >     let t = blah (i - 1)
--- >     yields t
--- >     yield i
--- >     yields t
+-- >     yields $ hanoi (n-1) from other to
+-- >     yield (from, to)
+-- >     yields $ hanoi (n-1) other to from
 -- >
--- > > convList (blah 4) :: [Int]
--- > [1,2,1,3,1,2,1,4,1,2,1,3,1,2,1]
+-- > > convList (hanoi 3 'A' 'B' 'C') :: [(Char, Char)]
+-- > [('A','B'),('A','C'),('B','C'),('A','B'),('C','A'),('C','B'),('A','B')]
 --
 
 module Control.Monad.Generator (
