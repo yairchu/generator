@@ -3,6 +3,23 @@
 -- Module is called ListT because List is taken by mtl
 
 -- | A list monad transformer / a monadic list.
+--
+-- Monadic list example:
+--   A program which reads numbers from the user and accumulates them.
+--
+-- > import Control.Monad.ListT (ListT)
+-- > import Data.List.Class (joinL, repeat, scanl, sequence, sequence_, takeWhile)
+-- > import Prelude hiding (repeat, scanl, sequence, sequence_, takeWhile)
+-- >
+-- > main =
+-- >   sequence_ .
+-- >   fmap print .
+-- >   scanl (+) 0 .
+-- >   fmap (fst . head) .
+-- >   takeWhile (not . null) .
+-- >   fmap reads .
+-- >   joinL . sequence $
+-- >   (repeat getLine :: ListT IO (IO String))
 
 module Control.Monad.ListT (
   ListItem(..), ListT(..), foldrListT
