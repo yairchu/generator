@@ -36,7 +36,7 @@ data ListItem l a =
   Nil |
   Cons { headL :: a, tailL :: l a }
 
-data ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
+newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
 
 -- | foldr for ListT
 foldrListT :: Monad m => (a -> m b -> m b) -> m b -> ListT m a -> m b
