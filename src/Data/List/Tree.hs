@@ -140,6 +140,32 @@ mergeOnSortedHeads f list =
 
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
+--
+-- Example: Find smallest Pythagorian Triplets
+--
+-- > import Control.Monad
+-- > import Control.Monad.Generator
+-- > import Control.Monad.Trans
+-- > import Data.List.Tree
+-- > import Data.Maybe
+-- >
+-- > pythagorianTriplets =
+-- >   catMaybes .
+-- >   fmap fst .
+-- >   bestFirstSearchSortedChildrenOn snd .
+-- >   generate $ do
+-- >     x <- lift [1..]
+-- >     yield (Nothing, x)
+-- >     y <- lift [1..]
+-- >     yield (Nothing, x + y)
+-- >     z <- lift [1..]
+-- >     yield (Nothing, x + y + z)
+-- >     lift . guard $ x^2 + y^2 == z^2
+-- >     yield (Just (x, y, z), 0)
+-- >
+-- > > print $ take 10 pythagorianTriplets
+-- > [(3,4,5),(4,3,5),(6,8,10),(8,6,10),(5,12,13),(12,5,13),(9,12,15),(12,9,15),(15,8,17),(8,15,17)]
+
 bestFirstSearchSortedChildrenOn ::
   (Ord b, Tree t) => (a -> b) -> t a -> ItemM t a
 bestFirstSearchSortedChildrenOn func =
