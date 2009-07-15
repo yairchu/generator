@@ -32,10 +32,3 @@ Library
                        Data.List.Class,
                        Data.List.Tree
   Ghc-Options:         -O2 -Wall
-  Extensions:          FlexibleContexts,
-                       FlexibleInstances,
-                       FunctionalDependencies,
-                       MultiParamTypeClasses,
-                       RankNTypes,
-                       UndecidableInstances
-

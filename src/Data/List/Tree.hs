@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, ScopedTypeVariables, UndecidableInstances #-}
 
 -- | Functions for iterating trees.
 -- A 'List' whose underlying monad is also a 'List' is a tree.
@@ -52,37 +52,40 @@ import Data.List.Class (
   transformListMonad, transpose)
 
 -- | A 'type-class synonym' for Trees.
-class (List l k, List k m) => Tree l k m
-instance (List l k, List k m) => Tree l k m
+class (List t, List (ItemM t)) => Tree t
+instance (List t, List (ItemM t)) => Tree t
 
-search :: (List l m, MonadPlus m) => (m (m a) -> m a) -> l a -> m a
+search :: (List l, MonadPlus (ItemM l)) => (ItemM l (ItemM l a) -> ItemM l a) -> l a -> ItemM l a
 search merge =
   merge . foldrL step mzero
   where
     step a = return . cons a . merge
 
 -- | Iterate a tree in DFS pre-order. (Depth First Search)
-dfs :: (List l m, MonadPlus m) => l a -> m a
+dfs :: (List l, MonadPlus (ItemM l)) => l a -> ItemM l a
 dfs = search join
 
-toListTree :: Tree l k m => l a -> ListT (ListT m) a
+toListTree :: Tree t => t a -> ListT (ListT (ItemM (ItemM t))) a
 toListTree = transformListMonad toListT
 
 -- | Transform a tree into lists of the items in its different layers
-bfsLayers :: Tree l k m => l a -> k (k a)
+bfsLayers :: Tree t => t a -> ItemM t (ItemM t a)
 bfsLayers =
   fromListT . liftM fromListT .
   search (liftM join . transpose) . liftM return .
   toListTree
 
 -- | Iterate a tree in BFS order. (Breadth First Search)
-bfs :: Tree l k m => l a -> k a
+bfs :: Tree t => t a -> ItemM t a
 bfs = join . bfsLayers
 
-mergeOn :: (Ord b, Monad m) => (a -> b) -> ListT m (ListT m a) -> ListT m a
+mergeOn ::
+  forall a b m. (Ord b, Monad m) =>
+  (a -> b) -> ListT m (ListT m a) -> ListT m a
 mergeOn f =
   joinL . foldlL merge2 mzero
   where
+    merge2 :: ListT m a -> ListT m a -> ListT m a
     merge2 xx yy =
       joinL $ do
         xi <- runListT xx
@@ -97,12 +100,13 @@ mergeOn f =
 
 -- | Best First Search given a scoring function.
 bestFirstSearchOn ::
-  (Ord b, Tree l k m) => (a -> b) -> l a -> k a
+  (Ord b, Tree t) => (a -> b) -> t a -> ItemM t a
 bestFirstSearchOn func =
   fromListT . search (mergeOn func) . toListTree
 
 mergeOnSortedHeads ::
-  (Ord b, Monad m) => (a -> b) -> ListT m (ListT m a) -> ListT m a
+  forall a b m. (Ord b, Monad m) =>
+  (a -> b) -> ListT m (ListT m a) -> ListT m a
 mergeOnSortedHeads f list =
   joinL $ do
     item <- runListT list
@@ -115,6 +119,7 @@ mergeOnSortedHeads f list =
           Cons x xs ->
             cons x . mergeOnSortedHeads f $ bury xs yys
   where
+    bury :: ListT m a -> ListT m (ListT m a) -> ListT m (ListT m a)
     bury xx yyy =
       joinL $ do
         xi <- runListT xx
@@ -136,14 +141,14 @@ mergeOnSortedHeads f list =
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
 bestFirstSearchSortedChildrenOn ::
-  (Ord b, Tree l k m) => (a -> b) -> l a -> k a
+  (Ord b, Tree t) => (a -> b) -> t a -> ItemM t a
 bestFirstSearchSortedChildrenOn func =
   fromListT . search (mergeOnSortedHeads func) . toListTree
 
 -- | Prune a tree or list given a predicate.
 -- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
 -- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
-prune :: (List l m, MonadPlus m) => (a -> Bool) -> l a -> l a
+prune :: (List l, MonadPlus (ItemM l)) => (a -> Bool) -> l a -> l a
 prune cond =
   joinM . liftM r
   where

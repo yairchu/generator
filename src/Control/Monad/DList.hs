@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | A difference-list monad transformer / a monadic difference-list.
 --
@@ -41,7 +41,8 @@ instance Monad m => MonadPlus (DListT m) where
   mzero = mempty
   mplus = mappend
 
-instance Monad m => List (DListT m) m where
+instance Monad m => List (DListT m) where
+  type ItemM (DListT m) = m
   joinL action =
     DListT $ \rest -> joinL $
     liftM (`runDListT` rest) action

@@ -38,11 +38,11 @@ instance MonadIO m => MonadIO (ConsumerT v m) where
   liftIO = lift . liftIO
 
 -- | Consume a 'ListT'
-evalConsumerT :: List l m => ConsumerT v m a -> l v -> m a
+evalConsumerT :: List l => ConsumerT v (ItemM l) a -> l v -> ItemM l a
 evalConsumerT (ConsumerT i) = evalStateT i . Just . toListT
 
 -- Consumer no longer has a producer left...
-putNoProducer :: List l m => StateT (Maybe (l v)) m ()
+putNoProducer :: List l => StateT (Maybe (l v)) (ItemM l) ()
 putNoProducer = put Nothing
 
 -- | Consume/get the next value

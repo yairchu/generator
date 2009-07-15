@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, RankNTypes, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, TypeFamilies #-}
 
 -- | The 'List' class and actions for lists
 
@@ -26,33 +26,36 @@ import Prelude hiding (
 
 -- | A class for list types.
 -- Every list has an underlying monad.
-class (MonadPlus l, Monad m) => List l m | l -> m where
+class (MonadPlus l, Monad (ItemM l)) => List l where
+  type ItemM l :: * -> *
   -- | Transform an action returning a list to the returned list
   --
   -- > > joinL $ Identity "hello"
   -- > "hello"
-  joinL :: m (l b) -> l b
+  joinL :: ItemM l (l b) -> l b
   -- | foldr for 'List's.
   -- the result and 'right side' values are monadic actions.
-  foldrL :: (a -> m b -> m b) -> m b -> l a -> m b
+  foldrL :: (a -> ItemM l b -> ItemM l b) -> ItemM l b -> l a -> ItemM l b
   foldrL consFunc nilFunc = foldrL consFunc nilFunc . toListT
   -- | Convert to a 'ListT'.
   --
   -- Can be done with a foldrL but included in type-class for efficiency.
-  toListT :: l a -> ListT m a
+  toListT :: l a -> ListT (ItemM l) a
   toListT = convList
   -- | Convert from a 'ListT'.
   --
   -- Can be done with a foldrL but included in type-class for efficiency.
-  fromListT :: ListT m a -> l a
+  fromListT :: ListT (ItemM l) a -> l a
   fromListT = convList
 
-instance List [] Identity where
+instance List [] where
+  type ItemM [] = Identity
   joinL = runIdentity
   foldrL = foldr
   toListT = fromList
 
-instance Monad m => List (ListT m) m where
+instance Monad m => List (ListT m) where
+  type ItemM (ListT m) = m
   joinL = ListT . (>>= runListT)
   foldrL = foldrListT
   toListT = id
@@ -72,7 +75,7 @@ fromList :: MonadPlus m => [a] -> m a
 fromList = foldr (mplus . return) mzero
 
 -- | Convert between lists with the same underlying monad
-convList :: (List l m, List k m) => l a -> k a
+convList :: (ItemM l ~ ItemM k, List l, List k) => l a -> k a
 convList =
   joinL . foldrL step (return mzero)
   where
@@ -91,8 +94,9 @@ filter cond =
       | otherwise = mzero
 
 -- for foldlL and scanl
-foldlL' :: List l m =>
-  (a -> m c -> c) -> (a -> c) -> (a -> b -> a) -> a -> l b -> c
+foldlL' :: List l =>
+  (a -> (ItemM l) c -> c) -> (a -> c) ->
+  (a -> b -> a) -> a -> l b -> c
 foldlL' joinVals atEnd step startVal =
   t startVal . foldrL astep (return atEnd)
   where
@@ -100,19 +104,19 @@ foldlL' joinVals atEnd step startVal =
     t cur = joinVals cur . (`ap` return cur)
 
 -- | An action to do foldl for 'List's
-foldlL :: List l m => (a -> b -> a) -> a -> l b -> m a
+foldlL :: List l => (a -> b -> a) -> a -> l b -> ItemM l a
 foldlL step startVal =
   foldlL' (const join) id astep (return startVal)
   where
     astep rest x = liftM (`step` x) rest
 
-scanl :: List l m => (a -> b -> a) -> a -> l b -> l a
+scanl :: List l => (a -> b -> a) -> a -> l b -> l a
 scanl =
   foldlL' consJoin $ const mzero
   where
     consJoin cur = cons cur . joinL
 
-genericTake :: (Integral i, List l m) => i -> l a -> l a
+genericTake :: (Integral i, List l) => i -> l a -> l a
 genericTake count
   | count <= 0 = const mzero
   | otherwise = foldlL' joinStep (const mzero) next Nothing
@@ -124,14 +128,14 @@ genericTake count
     joinStep (Just (_, x)) = cons x . joinL
 
 -- | Execute the monadic actions in a 'List'
-execute :: List l m => l a -> m ()
+execute :: List l => l a -> ItemM l ()
 execute = foldlL const ()
 
 -- | Transform a list of actions to a list of their results
 --
 -- > > joinM [Identity 4, Identity 7]
 -- > [4,7]
-joinM :: List l m => l (m a) -> l a
+joinM :: List l => l (ItemM l a) -> l a
 joinM =
   joinL . foldrL consFunc (return mzero)
   where
@@ -139,7 +143,7 @@ joinM =
       x <- action
       return . cons x . joinL $ rest
 
-takeWhile :: List l m => (a -> Bool) -> l a -> l a
+takeWhile :: List l => (a -> Bool) -> l a -> l a
 takeWhile cond =
   joinL . foldrL step (return mzero)
   where
@@ -151,7 +155,7 @@ takeWhile cond =
 --
 -- > > runIdentity $ toList "hello!"
 -- > "hello!"
-toList :: List l m => l a -> m [a]
+toList :: List l => l a -> ItemM l [a]
 toList =
   foldrL step $ return []
   where
@@ -161,7 +165,7 @@ toList =
 --
 -- > > runIdentity $ lengthL [1,2,3]
 -- > 3
-lengthL :: (Integral i, List l m) => l a -> m i
+lengthL :: (Integral i, List l) => l a -> ItemM l i
 lengthL = foldlL (const . (+ 1)) 0
 
 -- | Transform the underlying monad of a list given a way to transform the monad
@@ -169,8 +173,8 @@ lengthL = foldlL (const . (+ 1)) 0
 -- > > import Data.List.Tree (bfs)
 -- > > bfs (transformListMonad (\(Identity x) -> [x, x]) "hey" :: ListT [] Char)
 -- > "hheeeeyyyyyyyy"
-transformListMonad :: (List l m, List k s) =>
-  (forall x. m x -> s x) -> l a -> k a
+transformListMonad :: (List l, List k) =>
+  (forall x. ItemM l x -> ItemM k x) -> l a -> k a
 transformListMonad trans =
   t . foldrL step (return mzero)
   where
@@ -182,11 +186,11 @@ transformListMonad trans =
 -- Doing plain 'transformListMonad lift' instead doesn't give the compiler
 -- the same knowledge about the types.
 liftListMonad ::
-  (MonadTrans t, Monad (t m), List l m) =>
-  l a -> ListT (t m) a
+  (MonadTrans t, Monad (t (ItemM l)), List l) =>
+  l a -> ListT (t (ItemM l)) a
 liftListMonad = transformListMonad lift
 
-zip :: List l m => l a -> l b -> l (a, b)
+zip :: List l => l a -> l b -> l (a, b)
 zip as bs =
   r0 (toListT as) (toListT bs)
   where
@@ -196,6 +200,7 @@ zip as bs =
         case xi of
           Nil -> return mzero
           Cons x xs -> r1 x xs yy
+    r1 :: List l => a -> ListT (ItemM l) a -> ListT (ItemM l) b -> ItemM l (l (a, b))
     r1 x xs yy = do
       yi <- runListT yy
       return $ case yi of
@@ -205,20 +210,20 @@ zip as bs =
 
 -- zipWith based on zip and not vice versa,
 -- because the other way around hlint compains "use zip".
-zipWith :: List l m => (a -> b -> c) -> l a -> l b -> l c
+zipWith :: List l => (a -> b -> c) -> l a -> l b -> l c
 zipWith func as = liftM (uncurry func) . zip as
 
 -- | Consume all items and return the last one
 --
 -- > > runIdentity $ lastL "hello"
 -- > 'o'
-lastL :: List l m => l a -> m a
+lastL :: List l => l a -> ItemM l a
 lastL = foldlL (const id) undefined
 
 repeat :: MonadPlus m => a -> m a
 repeat = fix . cons
 
-transpose :: List l m => l (l a) -> l (l a)
+transpose :: List l => l (l a) -> l (l a)
 transpose matrix =
   joinL $ toList matrix >>= r . map toListT
   where
