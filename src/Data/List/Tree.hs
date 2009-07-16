@@ -48,8 +48,8 @@ module Data.List.Tree (
 import Control.Monad (MonadPlus(..), guard, join, liftM)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
-  List(..), cons, foldlL, joinM,
-  transformListMonad, transpose, merge2On)
+  List(..), cons, joinM, mergeOn,
+  transformListMonad, transpose)
 
 -- | A 'type-class synonym' for Trees.
 class (List t, List (ItemM t)) => Tree t
@@ -78,10 +78,6 @@ bfsLayers =
 -- | Iterate a tree in BFS order. (Breadth First Search)
 bfs :: Tree t => t a -> ItemM t a
 bfs = join . bfsLayers
-
-mergeOn :: (Ord b, Monad m) =>
-  (a -> b) -> ListT m (ListT m a) -> ListT m a
-mergeOn f = joinL . foldlL (merge2On f) mzero
 
 -- | Best First Search given a scoring function.
 bestFirstSearchOn ::

@@ -11,7 +11,8 @@ module Data.List.Class (
   takeWhile, genericTake, scanl,
   transpose, zip, zipWith,
   -- | Non standard List operations
-  foldlL, toList, lengthL, lastL, merge2On,
+  foldlL, toList, lengthL, lastL,
+  mergeOn, merge2On,
   -- | Operations useful for monadic lists
   execute, joinM,
   -- | Convert between List types
@@ -238,6 +239,9 @@ transpose matrix =
           joinL . r $ map tailL citems
     isCons Nil = False
     isCons _ = True
+
+mergeOn :: (Ord b, List l) => (a -> b) -> l (l a) -> l a
+mergeOn f = joinL . foldlL (merge2On f) mzero
 
 merge2On :: (Ord b, List l) => (a -> b) -> l a -> l a -> l a
 merge2On f xx yy =
