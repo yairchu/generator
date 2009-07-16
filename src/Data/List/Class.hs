@@ -12,7 +12,7 @@ module Data.List.Class (
   transpose, zip, zipWith,
   -- | Non standard List operations
   foldlL, toList, lengthL, lastL,
-  mergeOn, merge2On,
+  merge2On, mergeOn,
   -- | Operations useful for monadic lists
   execute, joinM,
   -- | Convert between List types
@@ -240,9 +240,17 @@ transpose matrix =
     isCons Nil = False
     isCons _ = True
 
+-- | Merge many lists sorted by a criteria given the criteria
+--
+-- > > mergeOn length [["hi", "hey", "hello"], ["cat", "falcon"], ["banana", "cucumber"]]
+-- > ["hi","cat","hey","hello","banana","falcon","cucumber"]
 mergeOn :: (Ord b, List l) => (a -> b) -> l (l a) -> l a
 mergeOn f = joinL . foldlL (merge2On f) mzero
 
+-- | Merge two lists sorted by a criteria given the criteria
+--
+-- > > merge2On id "01568" "239"
+-- > "01235689"
 merge2On :: (Ord b, List l) => (a -> b) -> l a -> l a -> l a
 merge2On f xx yy =
   fromListT . joinL $ do
