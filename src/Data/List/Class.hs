@@ -11,7 +11,9 @@ module Data.List.Class (
   takeWhile, genericTake, scanl,
   transpose, zip, zipWith,
   -- | Non standard List operations
-  foldlL, toList, execute, joinM, lengthL, lastL,
+  foldlL, toList, lengthL, lastL, merge2On,
+  -- | Operations useful for monadic lists
+  execute, joinM,
   -- | Convert between List types
   convList, transformListMonad, liftListMonad
   ) where
@@ -236,4 +238,17 @@ transpose matrix =
           joinL . r $ map tailL citems
     isCons Nil = False
     isCons _ = True
+
+merge2On :: (Ord b, List l) => (a -> b) -> l a -> l a -> l a
+merge2On f xx yy =
+  fromListT . joinL $ do
+    xi <- runListT (toListT xx)
+    yi <- runListT (toListT yy)
+    return $ case (xi, yi) of
+      (Cons x xs, Cons y ys)
+        | f y > f x -> cons x . merge2On f xs $ cons y ys
+        | otherwise -> cons y $ merge2On f (cons x xs) ys
+      (Cons x xs, Nil) -> cons x xs
+      (Nil, Cons y ys) -> cons y ys
+      (Nil, Nil) -> mzero
 

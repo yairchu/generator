@@ -49,7 +49,7 @@ import Control.Monad (MonadPlus(..), guard, join, liftM)
 import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
   List(..), cons, foldlL, joinM,
-  transformListMonad, transpose)
+  transformListMonad, transpose, merge2On)
 
 -- | A 'type-class synonym' for Trees.
 class (List t, List (ItemM t)) => Tree t
@@ -79,24 +79,9 @@ bfsLayers =
 bfs :: Tree t => t a -> ItemM t a
 bfs = join . bfsLayers
 
-mergeOn ::
-  forall a b m. (Ord b, Monad m) =>
+mergeOn :: (Ord b, Monad m) =>
   (a -> b) -> ListT m (ListT m a) -> ListT m a
-mergeOn f =
-  joinL . foldlL merge2 mzero
-  where
-    merge2 :: ListT m a -> ListT m a -> ListT m a
-    merge2 xx yy =
-      joinL $ do
-        xi <- runListT xx
-        yi <- runListT yy
-        return $ case (xi, yi) of
-          (Cons x xs, Cons y ys)
-            | f y > f x -> cons x . merge2 xs $ cons y ys
-            | otherwise -> cons y $ merge2 (cons x xs) ys
-          (x, y) -> mplus (t x) (t y)
-    t Nil = mzero
-    t (Cons x xs) = cons x xs
+mergeOn f = joinL . foldlL (merge2On f) mzero
 
 -- | Best First Search given a scoring function.
 bestFirstSearchOn ::
