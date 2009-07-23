@@ -1,17 +1,11 @@
 Name:                generator
 Version:             0.5.2
 Category:            Control
-Synopsis:            A list monad transformer and related functions.
+Synopsis:            Python-generators notation for creation of monadic lists
 Description:
-    A list monad transformer and a generic List class.
-
     Consumer and Generator monad transformers to create
     and iterate 'ListT's in a manner similar to
     Python generators.
-
-    A Tree module for searching and pruning
-    trees expressed as 'List's whose underlying monad
-    is also a List.
 License:             BSD3
 License-file:        LICENSE
 Author:              Yair Chuchem
@@ -24,11 +18,9 @@ Build-type:          Simple
 Library
   hs-Source-Dirs:      src
   Extensions:
-  Build-Depends:       base >= 3 && < 5, mtl, MaybeT
-  Exposed-modules:     Control.Monad.ListT,
-                       Control.Monad.DList,
+  Build-Depends:       base >= 3 && < 5, mtl, MaybeT, List
+  Exposed-modules:     Control.Monad.DList,
                        Control.Monad.Consumer,
-                       Control.Monad.Generator,
-                       Data.List.Class,
-                       Data.List.Tree
+                       Control.Monad.Generator
   Ghc-Options:         -O2 -Wall
+
