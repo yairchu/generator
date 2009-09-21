@@ -9,7 +9,7 @@
 -- The transformation from a list to a difference list is /O(N)/.
 
 module Control.Monad.DList (
-  DListT (..)
+  DListT (..), toListT, joinDListT
   ) where
 
 import Control.Applicative (Applicative(..))
@@ -21,6 +21,13 @@ import Data.Monoid (Monoid(..))
 
 -- | A monadic difference-list
 newtype DListT m a = DListT { runDListT :: ListT m a -> ListT m a }
+
+toListT :: Monad m => DListT m a -> ListT m a
+toListT = (`runDListT` mzero)
+
+joinDListT :: Monad m => m (DListT m a) -> DListT m a
+joinDListT action =
+  DListT (joinL . (`liftM` action) . flip runDListT)
 
 instance Monoid (DListT l a) where
   mempty = DListT id
@@ -40,13 +47,6 @@ instance Monad m => Applicative (DListT m) where
 instance Monad m => MonadPlus (DListT m) where
   mzero = mempty
   mplus = mappend
-
-instance Monad m => List (DListT m) where
-  type ItemM (DListT m) = m
-  joinL action =
-    DListT $ \rest -> joinL $
-    liftM (`runDListT` rest) action
-  toListT = (`runDListT` mzero)
 
 instance MonadTrans DListT where
   lift = DListT . mappend . lift

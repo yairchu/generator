@@ -20,7 +20,6 @@ Library
   Extensions:
   Build-Depends:       base >= 3 && < 5, mtl, MaybeT, List
   Exposed-modules:     Control.Monad.DList,
-                       Control.Monad.Consumer,
                        Control.Monad.Generator
   Ghc-Options:         -O2 -Wall
 
