@@ -7,10 +7,12 @@
 -- which can also be seen as a tree, except only its leafs
 -- are accessible and only in "dfs order".
 --
+-- > import Control.Monad.DList (toListT)
 -- > import Control.Monad.Generator
+-- > import Control.Monad.Trans
 -- > import Data.List.Class (genericTake, takeWhile, toList, lastL)
 -- >
--- > bits = t ""
+-- > bits = toListT (t "")
 -- > t prev =
 -- >   generate $ do
 -- >     yield prev
@@ -46,10 +48,9 @@ module Data.List.Tree (
   ) where
 
 import Control.Monad (MonadPlus(..), guard, join, liftM)
-import Control.Monad.ListT (ListT(..), ListItem(..))
 import Data.List.Class (
-  List(..), cons, joinM, mergeOn,
-  transformListMonad, transpose)
+  List(..), ListItem(..), cons,
+  foldrL, joinM, mergeOn, transpose)
 
 -- | A 'type-class synonym' for Trees.
 class (List t, List (ItemM t)) => Tree t
@@ -65,15 +66,10 @@ search merge =
 dfs :: (List l, MonadPlus (ItemM l)) => l a -> ItemM l a
 dfs = search join
 
-toListTree :: Tree t => t a -> ListT (ListT (ItemM (ItemM t))) a
-toListTree = transformListMonad toListT
-
 -- | Transform a tree into lists of the items in its different layers
 bfsLayers :: Tree t => t a -> ItemM t (ItemM t a)
 bfsLayers =
-  fromListT . liftM fromListT .
-  search (liftM join . transpose) . liftM return .
-  toListTree
+  search (liftM join . transpose) . liftM return
 
 -- | Iterate a tree in BFS order. (Breadth First Search)
 bfs :: Tree t => t a -> ItemM t a
@@ -82,42 +78,41 @@ bfs = join . bfsLayers
 -- | Best First Search given a scoring function.
 bestFirstSearchOn ::
   (Ord b, Tree t) => (a -> b) -> t a -> ItemM t a
-bestFirstSearchOn func =
-  fromListT . search (mergeOn func) . toListTree
+bestFirstSearchOn = search . mergeOn
 
 mergeOnSortedHeads ::
-  forall a b m. (Ord b, Monad m) =>
-  (a -> b) -> ListT m (ListT m a) -> ListT m a
-mergeOnSortedHeads f list =
+  (Ord b, List l) => (a -> b) -> l (l a) -> l a
+mergeOnSortedHeads f ll =
   joinL $ do
-    item <- runListT list
-    case item of
+    lli <- runList ll
+    case lli of
       Nil -> return mzero
-      Cons xx yys -> do
-        xi <- runListT xx
-        return $ case xi of
-          Nil -> mergeOnSortedHeads f yys
+      Cons l ls -> do
+        li <- runList l
+        return $ case li of
+          Nil -> mergeOnSortedHeads f ls
           Cons x xs ->
-            cons x . mergeOnSortedHeads f $ bury xs yys
+            cons x . mergeOnSortedHeads f $ bury xs ls
   where
-    bury :: ListT m a -> ListT m (ListT m a) -> ListT m (ListT m a)
     bury xx yyy =
       joinL $ do
-        xi <- runListT xx
+        xi <- runList xx
         case xi of
           Nil -> return yyy
-          Cons x xs -> bury' x xs yyy
-    bury' x xs yyy = do
-      yyi <- runListT yyy
-      case yyi of
-        Nil -> return . return $ cons x xs
-        Cons yy yys -> do
-          yi <- runListT yy
-          case yi of
-            Nil -> bury' x xs yys
-            Cons y ys
-              | f x <= f y -> return . cons (cons x xs) $ cons (cons y ys) yys
-              | otherwise -> return . cons (cons y ys) =<< bury' x xs yys
+          Cons x xs -> do
+            let rxx = cons x xs
+            yyi <- runList yyy
+            case yyi of
+              Nil -> return (cons rxx mzero)
+              Cons yy yys -> do
+                yi <- runList yy
+                return $ case yi of
+                  Nil -> bury xx yys
+                  Cons y ys ->
+                    let ryy = cons y ys
+                    in if f x <= f y
+                      then cons rxx . cons ryy $ yys
+                      else cons ryy . bury rxx $ yys
 
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
@@ -125,6 +120,7 @@ mergeOnSortedHeads f list =
 -- Example: Find smallest Pythagorian Triplets
 --
 -- > import Control.Monad
+-- > import Control.Monad.DList (toListT)
 -- > import Control.Monad.Generator
 -- > import Control.Monad.Trans
 -- > import Data.List.Tree
@@ -134,7 +130,7 @@ mergeOnSortedHeads f list =
 -- >   catMaybes .
 -- >   fmap fst .
 -- >   bestFirstSearchSortedChildrenOn snd .
--- >   generate $ do
+-- >   toListT . generate $ do
 -- >     x <- lift [1..]
 -- >     yield (Nothing, x)
 -- >     y <- lift [1..]
@@ -149,8 +145,8 @@ mergeOnSortedHeads f list =
 
 bestFirstSearchSortedChildrenOn ::
   (Ord b, Tree t) => (a -> b) -> t a -> ItemM t a
-bestFirstSearchSortedChildrenOn func =
-  fromListT . search (mergeOnSortedHeads func) . toListTree
+bestFirstSearchSortedChildrenOn =
+  search . mergeOnSortedHeads
 
 -- | Prune a tree or list given a predicate.
 -- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
@@ -160,6 +156,6 @@ prune cond =
   joinM . liftM r
   where
     r x = do
-      guard $ cond x
+      guard (cond x)
       return x
 
