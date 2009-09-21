@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
 
 -- Module is called ListT because List is taken by mtl
 
@@ -19,9 +19,9 @@
 -- >   fmap reads .
 -- >   joinM $ (repeat getLine :: ListT IO (IO String))
 
-module Control.Monad.ListT (
-  ListItem(..), ListT(..), foldrListT
-) where
+module Control.Monad.ListT (ListT) where
+
+import Data.List.Class (List(..), ListItem(..), foldrL)
 
 import Control.Applicative (Applicative(..))
 import Control.Monad (MonadPlus(..), ap, liftM)
@@ -32,27 +32,15 @@ import Control.Monad.State.Class (MonadState(..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.Monoid (Monoid(..))
 
-data ListItem l a =
-  Nil |
-  Cons { headL :: a, tailL :: l a }
-
 newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
-
--- | foldr for ListT
-foldrListT :: Monad m => (a -> m b -> m b) -> m b -> ListT m a -> m b
-foldrListT consFunc nilFunc list = do
-  item <- runListT list
-  case item of
-    Nil -> nilFunc
-    Cons x xs -> consFunc x $ foldrListT consFunc nilFunc xs
 
 -- for mappend, fmap, bind
 foldrListT' :: Monad m =>
   (a -> ListT m b -> ListT m b) -> ListT m b -> ListT m a -> ListT m b
 foldrListT' consFunc nilFunc =
-  ListT . foldrListT step (runListT nilFunc)
+  ListT . foldrL step (runList nilFunc)
   where
-    step x = runListT . consFunc x . ListT
+    step x = runList . consFunc x . ListT
 
 -- like generic cons except using that one
 -- would cause an infinite loop
@@ -68,7 +56,7 @@ instance Monad m => Functor (ListT m) where
 
 instance Monad m => Monad (ListT m) where
   return = ListT . return . (`Cons` mempty)
-  a >>= b = foldrListT' mappend mempty $ fmap b a
+  a >>= b = foldrListT' mappend mempty (fmap b a)
 
 instance Monad m => Applicative (ListT m) where
   pure = return
@@ -80,6 +68,11 @@ instance Monad m => MonadPlus (ListT m) where
 
 instance MonadTrans ListT where
   lift = ListT . liftM (`Cons` mempty)
+
+instance Monad m => List (ListT m) where
+  type ItemM (ListT m) = m
+  runList = runListT
+  joinL = ListT . (>>= runList)
 
 -- YUCK:
 -- I can't believe I'm doing this,
@@ -100,11 +93,11 @@ instance MonadCont m => MonadCont (ListT m) where
 
 instance MonadError e m => MonadError e (ListT m) where
   throwError = lift . throwError
-  catchError m = ListT . catchError (runListT m) . (runListT .)
+  catchError m = ListT . catchError (runList m) . (runList .)
 
 instance MonadReader s m => MonadReader s (ListT m) where
   ask = lift ask
-  local f = ListT . local f . runListT
+  local f = ListT . local f . runList
 
 instance MonadState s m => MonadState s (ListT m) where
   get = lift get

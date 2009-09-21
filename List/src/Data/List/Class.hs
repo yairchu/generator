@@ -4,7 +4,7 @@
 
 module Data.List.Class (
   -- | The List typeclass
-  List (..),
+  List (..), ListItem (..),
   -- | List operations for MonadPlus
   cons, fromList, filter, repeat,
   -- | Standard list operations
@@ -16,17 +16,19 @@ module Data.List.Class (
   -- | Operations useful for monadic lists
   execute, joinM,
   -- | Convert between List types
-  convList, transformListMonad, liftListMonad
+  convList, transformListMonad -- , liftListMonad
   ) where
 
 import Control.Monad (MonadPlus(..), liftM)
 import Control.Monad.Identity (Identity(..))
-import Control.Monad.ListT (ListT(..), ListItem(..))
-import Control.Monad.Trans (MonadTrans(..))
 import Data.Function (fix)
 import Data.Maybe (fromJust)
 import Prelude hiding (
   filter, repeat, scanl, takeWhile, zip, zipWith)
+
+data ListItem l a =
+  Nil |
+  Cons { headL :: a, tailL :: l a }
 
 -- | A class for list types.
 -- Every list has an underlying monad.
@@ -44,11 +46,6 @@ instance List [] where
   runList [] = Identity Nil
   runList (x:xs) = Identity $ Cons x xs
   joinL = runIdentity
-
-instance Monad m => List (ListT m) where
-  type ItemM (ListT m) = m
-  runList = runListT
-  joinL = ListT . (>>= runList)
 
 -- | foldr for 'List's.
 -- the result and 'right side' values are monadic actions.
@@ -176,10 +173,12 @@ transformListMonad trans =
 --
 -- Doing plain 'transformListMonad lift' instead doesn't give the compiler
 -- the same knowledge about the types.
+{-
 liftListMonad ::
   (MonadTrans t, Monad (t (ItemM l)), List l) =>
   l a -> ListT (t (ItemM l)) a
 liftListMonad = transformListMonad lift
+-}
 
 zip :: List l => l a -> l b -> l (a, b)
 zip xx yy =
