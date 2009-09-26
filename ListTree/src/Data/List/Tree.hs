@@ -44,19 +44,26 @@
 --
 module Data.List.Tree (
   Tree, dfs, bfs, bfsLayers, bestFirstSearchOn,
-  prune, bestFirstSearchSortedChildrenOn
+  prune, bestFirstSearchSortedChildrenOn,
+  branchAndBound
   ) where
 
-import Control.Monad (MonadPlus(..), guard, join, liftM)
+import Control.Monad (
+  MonadPlus(..), guard, join, liftM, liftM2, when)
+import Control.Monad.ListT (ListT)
+import Control.Monad.State (StateT, MonadState(..))
+import Control.Monad.Trans (lift)
 import Data.List.Class (
   List(..), ListItem(..), cons,
-  foldrL, joinM, mergeOn, transpose)
+  foldrL, joinM, mergeOn, transpose,
+  transformListMonad)
 
 -- | A 'type-class synonym' for Trees.
 class (List t, List (ItemM t)) => Tree t
 instance (List t, List (ItemM t)) => Tree t
 
-search :: (List l, MonadPlus (ItemM l)) => (ItemM l (ItemM l a) -> ItemM l a) -> l a -> ItemM l a
+search :: (List l, MonadPlus (ItemM l)) =>
+  (ItemM l (ItemM l a) -> ItemM l a) -> l a -> ItemM l a
 search merge =
   merge . foldrL step mzero
   where
@@ -152,10 +159,42 @@ bestFirstSearchSortedChildrenOn =
 -- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
 -- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
 prune :: (List l, MonadPlus (ItemM l)) => (a -> Bool) -> l a -> l a
-prune cond =
+prune = pruneM . fmap return
+
+pruneM :: (List l, MonadPlus (ItemM l)) => (a -> ItemM l Bool) -> l a -> l a
+pruneM cond =
   joinM . liftM r
   where
     r x = do
-      guard (cond x)
+      cond x >>= guard
       return x
+
+-- | Generalized "Branch and Bound". A method for pruning.
+--
+-- The result of this function,
+-- would usually be given to another search algorithm,
+-- such as `dfs`, in order to find the node with lowest value.
+--
+-- This augments the regular search by pruning the tree.
+-- Given a function to calculate a lower and upper bound for a subtree,
+-- we keep the lowest upper bound (hence the State monad) encountered so far,
+-- and we prune any subtree whose lower bound is over the known upper bound.
+branchAndBound ::
+  (Ord b, Tree t) => (a -> (Maybe b, Maybe b))
+  -> t a -> ListT (ListT (StateT (Maybe b) (ItemM (ItemM t)))) a
+branchAndBound boundFunc =
+  pruneM cond . transformListMonad (transformListMonad lift)
+  where
+    cond x = do
+      upperSoFar <- get
+      if Just True == liftM2 (>) lower upperSoFar
+        then return False
+        else do
+          -- this "when" clause isn't before the if,
+          -- so upper bound won't be calculated if not needed.
+          -- this optiminzation is based on (upper >= lower)
+          when (Just True == liftM2 (<) upper upperSoFar) (put upper)
+          return True
+      where
+        (lower, upper) = boundFunc x
 

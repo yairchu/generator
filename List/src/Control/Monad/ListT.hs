@@ -35,12 +35,11 @@ import Data.Monoid (Monoid(..))
 newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
 
 -- for mappend, fmap, bind
-foldrListT' :: Monad m =>
-  (a -> ListT m b -> ListT m b) -> ListT m b -> ListT m a -> ListT m b
-foldrListT' consFunc nilFunc =
-  ListT . foldrL step (runList nilFunc)
+foldrL' :: List l => (a -> l b -> l b) -> l b -> l a -> l b
+foldrL' consFunc nilFunc =
+  joinL . foldrL step (return nilFunc)
   where
-    step x = runList . consFunc x . ListT
+    step x = return . consFunc x . joinL
 
 -- like generic cons except using that one
 -- would cause an infinite loop
@@ -49,14 +48,14 @@ cons x = ListT . return . Cons x
 
 instance Monad m => Monoid (ListT m a) where
   mempty = ListT $ return Nil
-  mappend = flip (foldrListT' cons)
+  mappend = flip (foldrL' cons)
 
 instance Monad m => Functor (ListT m) where
-  fmap func = foldrListT' (cons . func) mempty
+  fmap func = foldrL' (cons . func) mempty
 
 instance Monad m => Monad (ListT m) where
   return = ListT . return . (`Cons` mempty)
-  a >>= b = foldrListT' mappend mempty (fmap b a)
+  a >>= b = foldrL' mappend mempty (fmap b a)
 
 instance Monad m => Applicative (ListT m) where
   pure = return
