@@ -3,8 +3,8 @@ Version:             0.5.3
 Category:            Control
 Synopsis:            Python-generators notation for creation of monadic lists
 Description:
-    Consumer and Generator monad transformers to create
-    and iterate 'ListT's in a manner similar to
+    Generator monad transformer to create
+    monadic lists in a manner similar to
     Python generators.
 License:             BSD3
 License-file:        LICENSE

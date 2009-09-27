@@ -1,9 +1,9 @@
 Name:                ListTree
 Version:             0.1
-Category:            Control
+Category:            Algorithms
 Synopsis:            Combinatoric search using ListT
 Description:
-    A Tree module for searching and pruning
+    Searching and pruning
     trees expressed as 'List's whose underlying monad
     is also a List.
 License:             BSD3

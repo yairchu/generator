@@ -43,8 +43,13 @@
 -- > ["000","001","010","100","101"]
 --
 module Data.List.Tree (
-  Tree, dfs, bfs, bfsLayers, bestFirstSearchOn,
-  prune, bestFirstSearchSortedChildrenOn,
+  Tree,
+  -- | Search algorithms
+  dfs, bfs, bfsLayers,
+  bestFirstSearchOn,
+  bestFirstSearchSortedChildrenOn,
+  -- | Pruning methods
+  prune, pruneM,
   branchAndBound
   ) where
 
@@ -121,6 +126,20 @@ mergeOnSortedHeads f ll =
                       then cons rxx . cons ryy $ yys
                       else cons ryy . bury rxx $ yys
 
+-- | Prune a tree or list given a predicate.
+-- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
+-- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
+prune :: (List l, MonadPlus (ItemM l)) => (a -> Bool) -> l a -> l a
+prune = pruneM . fmap return
+
+pruneM :: (List l, MonadPlus (ItemM l)) => (a -> ItemM l Bool) -> l a -> l a
+pruneM cond =
+  joinM . liftM r
+  where
+    r x = do
+      cond x >>= guard
+      return x
+
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
 --
@@ -155,23 +174,9 @@ bestFirstSearchSortedChildrenOn ::
 bestFirstSearchSortedChildrenOn =
   search . mergeOnSortedHeads
 
--- | Prune a tree or list given a predicate.
--- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
--- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
-prune :: (List l, MonadPlus (ItemM l)) => (a -> Bool) -> l a -> l a
-prune = pruneM . fmap return
-
-pruneM :: (List l, MonadPlus (ItemM l)) => (a -> ItemM l Bool) -> l a -> l a
-pruneM cond =
-  joinM . liftM r
-  where
-    r x = do
-      cond x >>= guard
-      return x
-
 -- | Generalized "Branch and Bound". A method for pruning.
 --
--- The result of this function,
+-- The result of this function
 -- would usually be given to another search algorithm,
 -- such as `dfs`, in order to find the node with lowest value.
 --
