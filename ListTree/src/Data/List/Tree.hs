@@ -187,13 +187,16 @@ branchAndBound boundFunc =
   where
     cond x = do
       upperSoFar <- get
-      if Just True == liftM2 (>) lower upperSoFar
+      if Just True == liftM2 (>=) lower upperSoFar
         then return False
         else do
           -- this "when" clause isn't before the if,
           -- so upper bound won't be calculated if not needed.
           -- this optiminzation is based on (upper >= lower)
-          when (Just True == liftM2 (<) upper upperSoFar) (put upper)
+          when
+            ( Nothing == upperSoFar
+            || Just True == liftM2 (<) upper upperSoFar
+            ) (put upper)
           return True
       where
         (lower, upper) = boundFunc x
