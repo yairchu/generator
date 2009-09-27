@@ -16,7 +16,7 @@ module Data.List.Class (
   -- | Operations useful for monadic lists
   execute, joinM,
   -- | Convert between List types
-  convList, transformListMonad
+  transformListMonad
   ) where
 
 import Control.Monad (MonadPlus(..), liftM)
@@ -29,6 +29,7 @@ import Prelude hiding (
 data ListItem l a =
   Nil |
   Cons { headL :: a, tailL :: l a }
+  deriving (Eq, Ord, Read, Show)
 
 -- | A class for list types.
 -- Every list has an underlying monad.
@@ -68,13 +69,6 @@ cons = mplus . return
 -- > Just 5
 fromList :: MonadPlus m => [a] -> m a
 fromList = foldr (mplus . return) mzero
-
--- | Convert between lists with the same underlying monad
-convList :: (ItemM l ~ ItemM k, List l, List k) => l a -> k a
-convList =
-  joinL . foldrL step (return mzero)
-  where
-    step x = return . cons x . joinL
 
 -- | filter for any MonadPlus
 --

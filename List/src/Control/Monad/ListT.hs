@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, TypeFamilies, UndecidableInstances #-}
 
 -- Module is called ListT because List is taken by mtl
 
@@ -32,7 +32,13 @@ import Control.Monad.State.Class (MonadState(..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.Monoid (Monoid(..))
 
-newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
+newtype ListT m a =
+  ListT { runListT :: m (ListItem (ListT m) a) }
+
+deriving instance (Eq (m (ListItem (ListT m) a))) => Eq (ListT m a)
+deriving instance (Ord (m (ListItem (ListT m) a))) => Ord (ListT m a)
+deriving instance (Read (m (ListItem (ListT m) a))) => Read (ListT m a)
+deriving instance (Show (m (ListItem (ListT m) a))) => Show (ListT m a)
 
 -- for mappend, fmap, bind
 foldrL' :: List l => (a -> l b -> l b) -> l b -> l a -> l b

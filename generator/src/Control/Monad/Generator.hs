@@ -1,7 +1,9 @@
 -- | A monad transformer for the creation of Lists.
 -- Similar to Python's generators.
 --
--- > import Data.List.Class (convList)
+-- > import Control.Monad.DList (toListT)
+-- > import Control.Monad.Identity (Identity(..))
+-- > import Data.List.Class (toList)
 -- >
 -- > hanoi 0 _ _ _ = mempty
 -- > hanoi n from to other =
@@ -10,7 +12,7 @@
 -- >     yield (from, to)
 -- >     yields $ hanoi (n-1) other to from
 -- >
--- > > convList (hanoi 3 'A' 'B' 'C') :: [(Char, Char)]
+-- > > runIdentity . toList . toListT $ hanoi 3 'A' 'B' 'C' :: [(Char, Char)]
 -- > [('A','B'),('A','C'),('B','C'),('A','B'),('C','A'),('C','B'),('A','B')]
 --
 

@@ -18,7 +18,7 @@ Build-type:          Simple
 Library
   hs-Source-Dirs:      src
   Extensions:
-  Build-Depends:       base >= 3 && < 5, List, mtl
+  Build-Depends:       base >= 3 && < 5, List >= 0.2, mtl
   Exposed-modules:     Data.List.Tree
   Ghc-Options:         -O2 -Wall
 
