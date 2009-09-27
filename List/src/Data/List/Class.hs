@@ -16,7 +16,7 @@ module Data.List.Class (
   -- | Operations useful for monadic lists
   execute, joinM,
   -- | Convert between List types
-  convList, transformListMonad -- , liftListMonad
+  convList, transformListMonad
   ) where
 
 import Control.Monad (MonadPlus(..), liftM)
@@ -168,17 +168,6 @@ transformListMonad trans =
   where
     t = joinL . trans
     step x = return . cons x . t
-
--- | Lift the underlying monad of a list and transform it to a ListT.
---
--- Doing plain 'transformListMonad lift' instead doesn't give the compiler
--- the same knowledge about the types.
-{-
-liftListMonad ::
-  (MonadTrans t, Monad (t (ItemM l)), List l) =>
-  l a -> ListT (t (ItemM l)) a
-liftListMonad = transformListMonad lift
--}
 
 zip :: List l => l a -> l b -> l (a, b)
 zip xx yy =
