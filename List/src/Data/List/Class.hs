@@ -15,6 +15,8 @@ module Data.List.Class (
   merge2On, mergeOn,
   -- | Operations useful for monadic lists
   execute, joinM,
+  -- | Operations for non-monadic lists
+  sortOn,
   -- | Convert between List types
   transformListMonad
   ) where
@@ -22,7 +24,9 @@ module Data.List.Class (
 import Control.Monad (MonadPlus(..), liftM)
 import Control.Monad.Identity (Identity(..))
 import Data.Function (fix)
+import Data.List (sortBy)
 import Data.Maybe (fromJust)
+import Data.Ord (comparing)
 import Prelude hiding (
   filter, repeat, scanl, takeWhile, zip, zipWith)
 
@@ -227,4 +231,10 @@ merge2On f xx yy =
       (Cons x xs, Nil) -> cons x xs
       (Nil, Cons y ys) -> cons y ys
       (Nil, Nil) -> mzero
+
+-- sorts require looking at the whole list
+-- even before the consumption of the first result element,
+-- so they make no sense for monadic lists
+sortOn :: Ord b => (a -> b) -> [a] -> [a]
+sortOn = sortBy . comparing
 

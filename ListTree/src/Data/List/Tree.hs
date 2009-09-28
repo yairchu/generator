@@ -48,6 +48,7 @@ module Data.List.Tree (
   dfs, bfs, bfsLayers,
   bestFirstSearchOn,
   bestFirstSearchSortedChildrenOn,
+  sortChildrenOn,
   -- | Pruning methods
   prune, pruneM,
   branchAndBound
@@ -55,13 +56,13 @@ module Data.List.Tree (
 
 import Control.Monad (
   MonadPlus(..), guard, join, liftM, liftM2, when)
-import Control.Monad.ListT (ListT)
+import Control.Monad.ListT (ListT(..))
 import Control.Monad.State (StateT, MonadState(..))
 import Control.Monad.Trans (lift)
 import Data.List.Class (
   List(..), ListItem(..), cons,
-  foldrL, joinM, mergeOn, transpose,
-  transformListMonad)
+  foldrL, fromList, joinM, mergeOn, transpose,
+  sortOn, toList, transformListMonad)
 
 -- | A 'type-class synonym' for Trees.
 class (List t, List (ItemM t)) => Tree t
@@ -205,4 +206,13 @@ branchAndBound boundFunc =
           return True
       where
         (lower, upper) = boundFunc x
+
+sortChildrenOn ::
+  forall a b t. (Ord b, Tree t) => (a -> b)
+  -> t a -> ListT (ItemM t) a
+sortChildrenOn func =
+  ListT . joinL . liftM (fromList . sortOn f) . toList . runList . transformListMonad id
+  where
+    f (Cons x _) = Just (func x)
+    f _ = Nothing
 

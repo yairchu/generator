@@ -19,7 +19,7 @@
 -- >   fmap reads .
 -- >   joinM $ (repeat getLine :: ListT IO (IO String))
 
-module Control.Monad.ListT (ListT) where
+module Control.Monad.ListT (ListT(..)) where
 
 import Data.List.Class (List(..), ListItem(..), foldrL)
 
