@@ -55,7 +55,7 @@ module Data.List.Tree (
 
 import Control.Monad (
   MonadPlus(..), guard, join, liftM, liftM2, when)
-import Control.Monad.StreamT (StreamT)
+import Control.Monad.ListT (ListT)
 import Control.Monad.State (StateT, MonadState(..))
 import Control.Monad.Trans (lift)
 import Data.List.Class (
@@ -186,7 +186,7 @@ bestFirstSearchSortedChildrenOn =
 -- and we prune any subtree whose lower bound is over the known upper bound.
 branchAndBound ::
   (Ord b, Tree t) => (a -> (Maybe b, Maybe b))
-  -> t a -> StreamT (StreamT (StateT (Maybe b) (ItemM (ItemM t)))) a
+  -> t a -> ListT (ListT (StateT (Maybe b) (ItemM (ItemM t)))) a
 branchAndBound boundFunc =
   pruneM cond . transformListMonad (transformListMonad lift)
   where

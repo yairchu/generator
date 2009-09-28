@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, TypeFamilies, UndecidableInstances #-}
 
--- Module is called ListT because Control.Monad.List
--- is occupied by mtl's odd List monad transformer.
+-- Module is called ListT because List is taken by mtl
 
 -- | A list monad transformer / a monadic list.
 --
