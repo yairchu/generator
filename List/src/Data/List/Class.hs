@@ -14,7 +14,7 @@ module Data.List.Class (
   foldrL, foldlL, toList, lengthL, lastL,
   merge2On, mergeOn,
   -- | Operations useful for monadic lists
-  execute, joinM,
+  execute, joinM, iterateM,
   -- | Operations for non-monadic lists
   sortOn,
   -- | Convert between List types
@@ -237,4 +237,17 @@ merge2On f xx yy =
 -- so they make no sense for monadic lists
 sortOn :: Ord b => (a -> b) -> [a] -> [a]
 sortOn = sortBy . comparing
+
+-- | Monadic version of iterate.
+-- Can be used to produce trees given a children of node function.
+--
+-- > import Data.List.Tree (bfsLayers)
+-- > take 3 $ bfsLayers (iterateM (\i -> [i*2, i*2+1]) 1 :: ListT [] Int)
+-- > [[1],[2,3],[4,5,6,7]]
+iterateM :: List l => (a -> ItemM l a) -> a -> l a
+iterateM step start =
+  cons start . -- important that this is here and not inside the liftM
+  joinL .
+  liftM (iterateM step) .
+  step $ start
 
