@@ -14,15 +14,17 @@ module Data.List.Class (
   foldrL, foldlL, toList, lengthL, lastL,
   merge2On, mergeOn,
   -- | Operations useful for monadic lists
-  execute, joinM, iterateM,
+  execute, joinM, iterateM, takeWhileM,
   -- | Operations for non-monadic lists
   sortOn,
   -- | Convert between List types
-  transformListMonad
+  transformListMonad,
+  listStateJoin
   ) where
 
 import Control.Monad (MonadPlus(..), liftM)
 import Control.Monad.Identity (Identity(..))
+import Control.Monad.State (StateT(..), evalStateT, get)
 import Data.Function (fix)
 import Data.List (sortBy)
 import Data.Maybe (fromJust)
@@ -130,12 +132,17 @@ joinM =
       liftM (`cons` joinL rest) action
 
 takeWhile :: List l => (a -> Bool) -> l a -> l a
-takeWhile cond =
+takeWhile = takeWhileM . fmap return
+
+takeWhileM :: List l => (a -> ItemM l Bool) -> l a -> l a
+takeWhileM cond =
   joinL . foldrL step (return mzero)
   where
-    step x
-      | cond x = return . cons x . joinL
-      | otherwise = const (return mzero)
+    step x rest = do
+      b <- cond x
+      if b
+        then return . cons x . joinL $ rest
+        else return mzero
 
 -- | An action to transform a 'List' to a list
 --
@@ -250,4 +257,21 @@ iterateM step start =
   joinL .
   liftM (iterateM step) .
   step $ start
+
+-- | listStateJoin can transform a
+-- @ListT (StateT s m) a@ to a @StateT s m (ListT m a)@.
+--
+-- When iterating a list, a state is already maintained and passed along
+-- in the form of the location along the list.
+-- This joins the inner @StateT s@ into the list.
+-- The list will fork the state given to it and won't share its changes.
+listStateJoin :: (List l, List k, ItemM l ~ StateT s (ItemM k))
+  => l a -> ItemM l (k a)
+listStateJoin list = do
+  start <- get
+  return . joinL . (`evalStateT` start) $ do
+    item <- runList list
+    case item of
+      Nil -> return mzero
+      Cons x xs -> liftM (cons x) (listStateJoin xs)
 
