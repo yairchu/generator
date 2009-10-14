@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
 
 -- | A difference-list monad transformer / a monadic difference-list.
 --
@@ -15,6 +15,7 @@ module Control.Monad.DList (
 import Control.Applicative (Applicative(..))
 import Control.Monad (MonadPlus(..), liftM, ap)
 import Control.Monad.ListT (ListT)
+import Control.Monad.Reader.Class (MonadReader(..))
 import Control.Monad.Trans (MonadTrans(..))
 import Data.List.Class (List(..), cons)
 import Data.Monoid (Monoid(..))
@@ -50,4 +51,10 @@ instance Monad m => MonadPlus (DListT m) where
 
 instance MonadTrans DListT where
   lift = DListT . mappend . lift
+
+-- Yuck: (code duplication)
+
+instance MonadReader s m => MonadReader s (DListT m) where
+  ask = lift ask
+  local f (DListT x) = DListT (local f . x) -- or the other way around?
 

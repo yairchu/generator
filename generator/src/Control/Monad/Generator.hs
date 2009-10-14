@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
+
 -- | A monad transformer for the creation of Lists.
 -- Similar to Python's generators.
 --
@@ -24,6 +26,8 @@ import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
 import Control.Monad.Cont (Cont (..), mapCont)
 import Control.Monad.DList (DListT, joinDListT)
+import Control.Monad.Reader.Class (MonadReader(..))
+import Control.Monad.State.Class (MonadState(..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.List.Class (cons)
 import Data.Monoid (Monoid(..))
@@ -48,9 +52,6 @@ instance Monad m => Applicative (GeneratorT v m) where
 instance MonadTrans (GeneratorT v) where
   lift = GeneratorT . Cont . fmap joinDListT . flip liftM
 
-instance MonadIO m => MonadIO (GeneratorT v m) where
-  liftIO = lift . liftIO
-
 -- | /O(1)/, Transform a GeneratorT to a 'DListT'
 generate :: Monad m => GeneratorT v m () -> DListT m v
 generate = (`runCont` const mempty) . runGeneratorT
@@ -65,4 +66,22 @@ yield = modifyRes . cons
 -- | /O(1)/, Output all the values of a 'DListT'.
 yields :: Monad m => DListT m v -> GeneratorT v m ()
 yields = modifyRes . mappend
+
+-- Yuck: (code duplication)
+
+instance MonadIO m => MonadIO (GeneratorT v m) where
+  liftIO = lift . liftIO
+
+inGeneratorT
+  :: (Cont (DListT m0 v0) a0 -> Cont (DListT m1 v1) a1)
+  -> GeneratorT v0 m0 a0 -> GeneratorT v1 m1 a1
+inGeneratorT f = GeneratorT . f . runGeneratorT
+
+instance MonadReader s m => MonadReader s (GeneratorT v m) where
+  ask = lift ask
+  local = inGeneratorT . mapCont . local
+
+instance MonadState s m => MonadState s (GeneratorT v m) where
+  get = lift get
+  put = lift . put
 
