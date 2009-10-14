@@ -17,12 +17,12 @@
 --
 
 module Control.Monad.Generator (
-  GeneratorT, generate, yield, yields
+  GeneratorT(..), generate, yield, yields
   ) where
 
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
-import Control.Monad.Cont (Cont (..))
+import Control.Monad.Cont (Cont (..), mapCont)
 import Control.Monad.DList (DListT, joinDListT)
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.List.Class (cons)
@@ -46,23 +46,23 @@ instance Monad m => Applicative (GeneratorT v m) where
   (<*>) = ap
 
 instance MonadTrans (GeneratorT v) where
-  lift = GeneratorT . Cont . (joinDListT .) . flip liftM
+  lift = GeneratorT . Cont . fmap joinDListT . flip liftM
 
 instance MonadIO m => MonadIO (GeneratorT v m) where
   liftIO = lift . liftIO
 
 -- | /O(1)/, Transform a GeneratorT to a 'DListT'
 generate :: Monad m => GeneratorT v m () -> DListT m v
-generate = ($ const mempty) . runCont . runGeneratorT
+generate = (`runCont` const mempty) . runGeneratorT
 
-mkContNil :: (r -> r) -> Cont r ()
-mkContNil = Cont . (. ($ ()))
+modifyRes :: Monad m => (DListT m a -> DListT m a) -> GeneratorT a m ()
+modifyRes = GeneratorT . (`mapCont` return ())
 
 -- | /O(1)/, Output a result value
 yield :: Monad m => v -> GeneratorT v m ()
-yield = GeneratorT . mkContNil . cons
+yield = modifyRes . cons
 
 -- | /O(1)/, Output all the values of a 'DListT'.
 yields :: Monad m => DListT m v -> GeneratorT v m ()
-yields = GeneratorT . mkContNil . mappend
+yields = modifyRes . mappend
 
