@@ -7,17 +7,15 @@
 -- which can also be seen as a tree, except only its leafs
 -- are accessible and only in "dfs order".
 --
--- > import Control.Monad.DList (toListT)
 -- > import Control.Monad.Generator
 -- > import Control.Monad.Trans
 -- > import Data.List.Class (genericTake, takeWhile, toList, lastL)
 -- >
--- > bits = toListT (t "")
--- > t prev =
--- >   generate $ do
--- >     yield prev
--- >     x <- lift "01"
--- >     yields $ t (prev ++ [x])
+-- > bits = generate (t "")
+-- > t prev = do
+-- >   yield prev
+-- >   x <- lift "01"
+-- >   t (prev ++ [x])
 -- >
 -- > > take 3 (bfsLayers bits)
 -- > [[""],["0","1"],["00","01","10","11"]]
