@@ -54,6 +54,10 @@ instance List [] where
   runList (x:xs) = Identity $ Cons x xs
   joinL = runIdentity
 
+instance Functor m => Functor (ListItem m) where
+  fmap _ Nil = Nil
+  fmap func (Cons x xs) = Cons (func x) (fmap func xs)
+
 -- | foldr for 'List's.
 -- the result and 'right side' values are monadic actions.
 foldrL :: List l => (a -> ItemM l b -> ItemM l b) -> ItemM l b -> l a -> ItemM l b
