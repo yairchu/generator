@@ -253,14 +253,15 @@ sortOn = sortBy . comparing
 -- Can be used to produce trees given a children of node function.
 --
 -- > import Data.List.Tree (bfsLayers)
--- > take 3 $ bfsLayers (iterateM (\i -> [i*2, i*2+1]) 1 :: ListT [] Int)
+-- > take 3 $ bfsLayers (iterateM (\i -> [i*2, i*2+1]) [1] :: ListT [] Int)
 -- > [[1],[2,3],[4,5,6,7]]
-iterateM :: List l => (a -> ItemM l a) -> a -> l a
-iterateM step start =
-  cons start . -- important that this is here and not inside the liftM
-  joinL .
-  liftM (iterateM step) .
-  step $ start
+iterateM :: List l => (a -> ItemM l a) -> ItemM l a -> l a
+iterateM step startM =
+  joinL $ do
+    start <- startM
+    return . cons start
+      . iterateM step
+      . step $ start
 
 -- | listStateJoin can transform a
 -- @ListT (StateT s m) a@ to a @StateT s m (ListT m a)@.
