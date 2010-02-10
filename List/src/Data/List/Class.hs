@@ -11,7 +11,7 @@ module Data.List.Class (
   takeWhile, genericTake, scanl,
   transpose, zip, zipWith,
   -- | Non standard List operations
-  foldrL, foldlL, toList, lengthL, lastL,
+  foldrL, foldlL, foldl1L, toList, lengthL, lastL,
   merge2On, mergeOn,
   -- | Operations useful for monadic lists
   execute, joinM, iterateM, takeWhileM,
@@ -101,6 +101,12 @@ foldlL step startVal list = do
     Cons x xs ->
       let v = step startVal x
       in v `seq` foldlL step v xs
+
+foldl1L :: List l => (a -> a -> a) -> l a -> ItemM l a
+foldl1L step list = do
+  item <- runList list
+  let Cons x xs = item
+  foldlL step x xs
 
 scanl :: List l => (a -> b -> a) -> a -> l b -> l a
 scanl step startVal list =
