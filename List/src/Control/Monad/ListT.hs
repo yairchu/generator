@@ -19,7 +19,7 @@
 -- >   fmap reads .
 -- >   joinM $ (repeat getLine :: ListT IO (IO String))
 
-module Control.Monad.ListT (ListT(..)) where
+module Control.Monad.ListT (ListT(..),tellL,listenL,execWriterL) where
 
 import Data.List.Class (List(..), ListItem(..), foldrL)
 
@@ -29,6 +29,7 @@ import Control.Monad (MonadPlus(..), ap, liftM)
 import Control.Monad.Error.Class (MonadError(..))
 import Control.Monad.Reader.Class (MonadReader(..))
 import Control.Monad.State.Class (MonadState(..))
+import Control.Monad.Writer (MonadWriter(..))
 import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
 import Data.Monoid (Monoid(..))
 
@@ -108,3 +109,37 @@ instance MonadState s m => MonadState s (ListT m) where
   get = lift get
   put = lift . put
 
+-- | Write a message associated with the first cell of the list
+tellL :: (MonadWriter w m) => w -> ListT m ()
+tellL = lift . tell
+
+-- | The type slightly differs from 'listen' because if the list is finite, we get one more writer message than list elements, since there is a message associated with the final 'Nil' too. In that case we return 'Nothing' as the list element, otherwise 'Just' the original element.
+listenL
+  :: (MonadWriter w m) => ListT m a -> ListT m (Maybe a,w)
+listenL (ListT x) = 
+  ListT (do
+            (it,w) <- listen x
+            
+            let
+              (head',tail') = 
+                case it of
+                  Nil -> (Nothing,mzero)
+                  Cons a x' -> (Just a, listenL x')
+
+            -- AIUI, the 'let' above slightly increases lazyness because it allows the 'w' to be fetched without whnf'ing the 'it'
+            return (Cons (head',w) tail')
+        )
+
+-- | Execute all the @m@-monadic actions and 'mappend' all the writer results
+execWriterL :: (MonadWriter w m) => ListT m a -> m ([a],w)
+execWriterL (ListT x) =
+  do
+    (it,w) <- listen x
+
+    case it of
+      Nil -> return ([],w)
+      Cons a x' -> do
+        (as,ws) <- execWriterL x'
+        return (a:as,mappend w ws)
+
+    
