@@ -22,11 +22,10 @@ module Control.Monad.Generator (
 
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
-import Control.Monad.Cont (ContT (..), mapContT)
+import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.ListT (ListT)
-import Control.Monad.Reader.Class (MonadReader(..))
-import Control.Monad.State.Class (MonadState(..))
-import Control.Monad.Trans (MonadTrans(..), MonadIO(..))
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Cont (ContT (..), mapContT)
 import Data.List.Class (cons)
 import Data.Monoid (Monoid(..))
 
@@ -62,21 +61,5 @@ yield = modifyRes . cons
 breakGenerator :: Monad m => GeneratorT v m a
 breakGenerator = GeneratorT . ContT . const $ mempty
 
--- Yuck: (code duplication)
-
 instance MonadIO m => MonadIO (GeneratorT v m) where
   liftIO = lift . liftIO
-
-inGeneratorT
-  :: (ContT v0 (ListT m0) a0 -> ContT v1 (ListT m1) a1)
-  -> GeneratorT v0 m0 a0 -> GeneratorT v1 m1 a1
-inGeneratorT f = GeneratorT . f . runGeneratorT
-
-instance MonadReader s m => MonadReader s (GeneratorT v m) where
-  ask = lift ask
-  local = inGeneratorT . mapContT . local
-
-instance MonadState s m => MonadState s (GeneratorT v m) where
-  get = lift get
-  put = lift . put
-

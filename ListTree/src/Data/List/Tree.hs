@@ -55,11 +55,11 @@ module Data.List.Tree (
 import Control.Monad (
   MonadPlus(..), guard, join, liftM, liftM2, when)
 import Control.Monad.ListT (ListT(..))
-import Control.Monad.State (StateT, MonadState(..))
-import Control.Monad.Trans (lift)
+import Control.Monad.Trans.State (StateT, get, put)
+import Control.Monad.Trans.Class (MonadTrans(lift))
 import Data.List.Class (
   List(..), ListItem(..), cons,
-  foldrL, fromList, joinM, mergeOn, transpose,
+  foldrL, fromList, mergeOn, transpose,
   sortOn, toList, transformListMonad)
 
 -- | A 'type-class synonym' for Trees.
@@ -128,17 +128,15 @@ mergeOnSortedHeads f ll =
 -- | Prune a tree or list given a predicate.
 -- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
 -- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
-prune :: (List l, MonadPlus (ItemM l)) => (a -> Bool) -> l a -> l a
+prune :: MonadPlus m => (a -> Bool) -> ListT m a -> ListT m a
 prune = pruneM . fmap return
 
-pruneM :: (List l, MonadPlus (ItemM l)) => (a -> ItemM l Bool) -> l a -> l a
-pruneM cond =
-  joinM . liftM r
-  where
-    r x = do
-      cond x >>= guard
-      return x
-
+pruneM :: MonadPlus m => (a -> m Bool) -> ListT m a -> ListT m a
+pruneM cond list = do
+  x <- list
+  lift (cond x >>= guard)
+  return x
+  
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
 --
@@ -190,7 +188,7 @@ branchAndBound boundFunc =
   pruneM cond . transformListMonad (transformListMonad lift)
   where
     cond x = do
-      upperSoFar <- get
+      upperSoFar <- lift get
       if Just True == liftM2 (>=) lower upperSoFar
         then return False
         else do
@@ -200,7 +198,7 @@ branchAndBound boundFunc =
           when
             ( Nothing == upperSoFar
             || Just True == liftM2 (<) upper upperSoFar
-            ) (put upper)
+            ) (lift (put upper))
           return True
       where
         (lower, upper) = boundFunc x
@@ -213,4 +211,3 @@ sortChildrenOn func =
   where
     f (Cons x _) = Just (func x)
     f _ = Nothing
-

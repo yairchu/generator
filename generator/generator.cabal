@@ -18,7 +18,6 @@ Build-type:          Simple
 Library
   hs-Source-Dirs:      src
   Extensions:
-  Build-Depends:       base >= 3 && < 5, mtl, MaybeT, List >= 0.2
+  Build-Depends:       base >= 3 && < 5, transformers, List >= 0.4
   Exposed-modules:     Control.Monad.Generator
   Ghc-Options:         -O2 -Wall
-
