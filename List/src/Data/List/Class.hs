@@ -14,7 +14,7 @@ module Data.List.Class (
   foldrL, foldlL, foldl1L, toList, lengthL, lastL,
   merge2On, mergeOn,
   -- | Operations useful for monadic lists
-  execute, joinM, iterateM, takeWhileM,
+  execute, joinM, mapL, iterateM, takeWhileM,
   -- | Operations for non-monadic lists
   sortOn,
   -- | Convert between List types
@@ -140,6 +140,9 @@ joinM =
   where
     consFunc action rest =
       liftM (`cons` joinL rest) action
+
+mapL :: List l => (a -> ItemM l b) -> l a -> l b
+mapL func = joinM . liftM func
 
 takeWhile :: List l => (a -> Bool) -> l a -> l a
 takeWhile = takeWhileM . fmap return
