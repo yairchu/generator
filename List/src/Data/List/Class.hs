@@ -14,7 +14,7 @@ module Data.List.Class (
   foldrL, foldlL, foldl1L, toList, lengthL, lastL,
   merge2On, mergeOn,
   -- | Operations useful for monadic lists
-  execute, iterateM, takeWhileM,
+  execute, joinM, iterateM, takeWhileM,
   -- | Operations for non-monadic lists
   sortOn,
   -- | Convert between List types
@@ -129,6 +129,17 @@ genericTake count list
 -- | Execute the monadic actions in a 'List'
 execute :: List l => l a -> ItemM l ()
 execute = foldlL const ()
+
+-- | Transform a list of actions to a list of their results
+--
+-- > > joinM [Identity 4, Identity 7]
+-- > [4,7]
+joinM :: List l => l (ItemM l a) -> l a
+joinM =
+  joinL . foldrL consFunc (return mzero)
+  where
+    consFunc action rest =
+      liftM (`cons` joinL rest) action
 
 takeWhile :: List l => (a -> Bool) -> l a -> l a
 takeWhile = takeWhileM . fmap return
