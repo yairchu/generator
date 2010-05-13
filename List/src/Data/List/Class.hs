@@ -67,6 +67,7 @@ foldrL consFunc nilFunc list = do
     Nil -> nilFunc
     Cons x xs -> consFunc x (foldrL consFunc nilFunc xs)
 
+infixr 5 `cons`
 -- | Prepend an item to a 'MonadPlus'
 cons :: MonadPlus m => a -> m a -> m a
 cons = mplus . return
