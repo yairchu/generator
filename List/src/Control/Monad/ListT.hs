@@ -10,17 +10,15 @@
 -- > import Control.Monad (join)
 -- > import Control.Monad.ListT (ListT)
 -- > import Control.Monad.Trans (lift)
--- > import Data.List.Class (execute, repeat, scanl, takeWhile, mapL)
--- > import Prelude hiding (repeat, scanl, takeWhile)
+-- > import Data.List.Class (execute, repeatM, scanl, takeWhile, mapL)
+-- > import Prelude hiding (scanl, takeWhile)
 -- > 
 -- > main =
 -- >     execute . mapL print .
 -- >     scanl (+) 0 .
 -- >     fmap (fst . head) .
 -- >     takeWhile (not . null) .
--- >     fmap reads $ do
--- >       repeat ()
--- >       lift getLine :: ListT IO String
+-- >     fmap reads $ (repeatM getLine :: ListT IO String)
 
 module Control.Monad.ListT (ListT(..)) where
 
