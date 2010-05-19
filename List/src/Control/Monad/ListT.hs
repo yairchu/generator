@@ -1,16 +1,15 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, TypeFamilies, UndecidableInstances #-}
 
--- Module is called ListT because List is taken by mtl
-
 -- | A list monad transformer / a monadic list.
+--
+-- ( Module is called @Control.Monad.ListT@
+-- because @Control.Monad.Trans.List@ is already taken by "transformers" )
 --
 -- Monadic list example:
 --   A program which reads numbers from the user and accumulates them.
 --
--- > import Control.Monad (join)
--- > import Control.Monad.ListT (ListT)
--- > import Control.Monad.Trans (lift)
--- > import Data.List.Class (execute, repeatM, scanl, takeWhile, mapL)
+-- > import Control.Monad.Trans.List.Funcs (repeatM)
+-- > import Data.List.Class (execute, scanl, takeWhile, mapL)
 -- > import Prelude hiding (scanl, takeWhile)
 -- > 
 -- > main =
@@ -18,7 +17,7 @@
 -- >     scanl (+) 0 .
 -- >     fmap (fst . head) .
 -- >     takeWhile (not . null) .
--- >     fmap reads $ (repeatM getLine :: ListT IO String)
+-- >     fmap reads $ repeatM getLine
 
 module Control.Monad.ListT (ListT(..)) where
 

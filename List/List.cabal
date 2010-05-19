@@ -19,5 +19,6 @@ Library
   Extensions:
   Build-Depends:       base >= 3 && < 5, transformers >= 0.2.0
   Exposed-modules:     Control.Monad.ListT,
+                       Control.Monad.Trans.List.Funcs,
                        Data.List.Class
   Ghc-Options:         -O2 -Wall
