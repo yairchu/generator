@@ -58,14 +58,28 @@ instance Functor m => Functor (ListItem m) where
     fmap _ Nil = Nil
     fmap func (Cons x xs) = Cons (func x) (fmap func xs)
 
+-- | A "monadic-catamorphism" for lists.
+-- Unlike folds, this only looks at the list head.
+deconstructList :: List l => ItemM l r -> (a -> l a -> ItemM l r) -> l a -> ItemM l r
+deconstructList onNil onCons list = do
+    item <- runList list
+    case item of
+        Nil -> onNil
+        Cons x xs -> onCons x xs
+
+deconstructList' :: List l => l r -> (a -> l a -> l r) -> l a -> l r
+deconstructList' onNil onCons =
+    joinL . deconstructList (return onNil) onCons'
+    where
+        onCons' x = return . onCons x
+
 -- | foldr for 'List's.
 -- the result and 'right side' values are monadic actions.
 foldrL :: List l => (a -> ItemM l b -> ItemM l b) -> ItemM l b -> l a -> ItemM l b
-foldrL consFunc nilFunc list = do
-    item <- runList list
-    case item of
-        Nil -> nilFunc
-        Cons x xs -> consFunc x (foldrL consFunc nilFunc xs)
+foldrL consFunc nilFunc =
+    deconstructList nilFunc onCons
+    where
+        onCons x = consFunc x . foldrL consFunc nilFunc
 
 infixr 5 `cons`
 -- | Prepend an item to a 'MonadPlus'
@@ -95,37 +109,27 @@ filter cond =
 
 -- | An action to do foldl for 'List's
 foldlL :: List l => (a -> b -> a) -> a -> l b -> ItemM l a
-foldlL step startVal list = do
-    item <- runList list
-    case item of
-        Nil -> return startVal
-        Cons x xs ->
+foldlL step startVal =
+    deconstructList (return startVal) onCons
+    where
+        onCons x xs =
             let v = step startVal x
             in v `seq` foldlL step v xs
 
 foldl1L :: List l => (a -> a -> a) -> l a -> ItemM l a
-foldl1L step list = do
-    item <- runList list
-    let Cons x xs = item
-    foldlL step x xs
+-- should use "error" or "fail"?
+foldl1L = deconstructList (error "foldl1L: empty list") . foldlL
 
 scanl :: List l => (a -> b -> a) -> a -> l b -> l a
-scanl step startVal list =
-    cons startVal . joinL $ do
-        item <- runList list
-        return $ case item of
-            Nil -> mzero
-            Cons x xs -> scanl step (step startVal x) xs
+scanl step startVal =
+    cons startVal . deconstructList' mzero (scanl step . step startVal)
 
 genericTake :: (Integral i, List l) => i -> l a -> l a
-genericTake count list
-    | count <= 0 = mzero
-    | otherwise =
-        joinL $ do
-            item <- runList list
-            return $ case item of
-                Nil -> mzero
-                Cons x xs -> cons x (genericTake (count-1) xs)
+genericTake count
+    | count <= 0 = const mzero
+    | otherwise = deconstructList' mzero onCons
+    where
+        onCons x = cons x . genericTake (count - 1)
 
 -- | Execute the monadic actions in a 'List'
 execute :: List l => l a -> ItemM l ()
@@ -193,15 +197,10 @@ transformListMonad trans =
 
 zip :: List l => l a -> l b -> l (a, b)
 zip xx yy =
-    joinL $ do
-        xi <- runList xx
-        case xi of
-            Nil -> return mzero
-            Cons x xs -> do
-                yi <- runList yy
-                return $ case yi of
-                    Nil -> mzero
-                    Cons y ys -> cons (x, y) (zip xs ys)
+    deconstructList' mzero onConsX xx
+    where
+        onConsX x xs = deconstructList' mzero (onConsXY x xs) yy
+        onConsXY x xs y ys = cons (x, y) $ zip xs ys
 
 -- zipWith based on zip and not vice versa,
 -- because the other way around hlint compains "use zip".
@@ -287,9 +286,6 @@ listStateJoin :: (List l, List k, ItemM l ~ StateT s (ItemM k))
     => l a -> ItemM l (k a)
 listStateJoin list = do
     start <- get
-    return . joinL . (`evalStateT` start) $ do
-        item <- runList list
-        case item of
-            Nil -> return mzero
-            Cons x xs -> liftM (cons x) (listStateJoin xs)
-
+    return . joinL . (`evalStateT` start) $ deconstructList (return mzero) onCons list
+    where
+        onCons x = liftM (cons x) . listStateJoin
