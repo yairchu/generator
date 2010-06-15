@@ -8,17 +8,17 @@
 -- >
 -- > hanoi 0 _ _ _ = return ()
 -- > hanoi n from to other = do
--- >   hanoi (n-1) from other to
--- >   yield (from, to)
--- >   hanoi (n-1) other to from
+-- >     hanoi (n-1) from other to
+-- >     yield (from, to)
+-- >     hanoi (n-1) other to from
 -- >
 -- > > runIdentity . toList . generate $ hanoi 3 'A' 'B' 'C' :: [(Char, Char)]
 -- > [('A','B'),('A','C'),('B','C'),('A','B'),('C','A'),('C','B'),('A','B')]
 --
 
 module Control.Monad.Generator (
-  GeneratorT(..), generate, yield, breakGenerator
-  ) where
+    GeneratorT(..), generate, yield, breakGenerator
+    ) where
 
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
@@ -32,22 +32,22 @@ import Data.Monoid (Monoid(..))
 -- | A monad transformer to create 'List's.
 -- 'generate' transforms a "GeneratorT v m a" to a "ListT m a".
 newtype GeneratorT v m a =
-  GeneratorT { runGeneratorT :: ContT v (ListT m) a }
+    GeneratorT { runGeneratorT :: ContT v (ListT m) a }
 
 instance Monad m => Functor (GeneratorT v m) where
-  fmap = liftM
+    fmap = liftM
 
 instance Monad m => Monad (GeneratorT v m) where
-  return = GeneratorT . return
-  GeneratorT a >>= f = GeneratorT $ a >>= runGeneratorT . f
-  fail = lift . fail
+    return = GeneratorT . return
+    GeneratorT a >>= f = GeneratorT $ a >>= runGeneratorT . f
+    fail = lift . fail
 
 instance Monad m => Applicative (GeneratorT v m) where
-  pure = return
-  (<*>) = ap
+    pure = return
+    (<*>) = ap
 
 instance MonadTrans (GeneratorT v) where
-  lift = GeneratorT . lift . lift
+    lift = GeneratorT . lift . lift
 
 generate :: Monad m => GeneratorT v m () -> ListT m v
 generate = (`runContT` const mempty) . runGeneratorT
@@ -62,4 +62,4 @@ breakGenerator :: Monad m => GeneratorT v m a
 breakGenerator = GeneratorT . ContT . const $ mempty
 
 instance MonadIO m => MonadIO (GeneratorT v m) where
-  liftIO = lift . liftIO
+    liftIO = lift . liftIO
