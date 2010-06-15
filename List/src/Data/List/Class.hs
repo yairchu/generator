@@ -8,7 +8,7 @@ module Data.List.Class (
     -- | List operations for MonadPlus
     cons, fromList, filter, repeat,
     -- | Standard list operations
-    takeWhile, genericTake, scanl,
+    takeWhile, genericTake, scanl, scanl1,
     transpose, zip, zipWith,
     -- | Non standard List operations
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
@@ -30,7 +30,7 @@ import Data.List (sortBy)
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 import Prelude hiding (
-    filter, repeat, scanl, takeWhile, zip, zipWith)
+    filter, repeat, scanl, scanl1, takeWhile, zip, zipWith)
 
 data ListItem l a =
     Nil |
@@ -58,8 +58,10 @@ instance Functor m => Functor (ListItem m) where
     fmap _ Nil = Nil
     fmap func (Cons x xs) = Cons (func x) (fmap func xs)
 
--- | A "monadic-catamorphism" for lists.
+-- A "monadic-catamorphism" for lists.
 -- Unlike folds, this only looks at the list head.
+--
+-- Should this be exposed? Needs a good name first..
 deconstructList :: List l => ItemM l r -> (a -> l a -> ItemM l r) -> l a -> ItemM l r
 deconstructList onNil onCons list = do
     item <- runList list
@@ -123,6 +125,9 @@ foldl1L = deconstructList (error "foldl1L: empty list") . foldlL
 scanl :: List l => (a -> b -> a) -> a -> l b -> l a
 scanl step startVal =
     cons startVal . deconstructList' mzero (scanl step . step startVal)
+
+scanl1 :: List l => (a -> a -> a) -> l a -> l a
+scanl1 = deconstructList' mzero . scanl
 
 genericTake :: (Integral i, List l) => i -> l a -> l a
 genericTake count
