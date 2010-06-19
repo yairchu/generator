@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, ScopedTypeVariables, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, UndecidableInstances #-}
 
 -- | Functions for iterating trees.
 -- A 'List' whose underlying monad is also a 'List' is a tree.
@@ -203,9 +203,7 @@ branchAndBound boundFunc =
       where
         (lower, upper) = boundFunc x
 
-sortChildrenOn ::
-  forall a b t. (Ord b, Tree t) => (a -> b)
-  -> t a -> ListT (ItemM t) a
+sortChildrenOn :: (Ord b, Tree t) => (a -> b) -> t a -> ListT (ItemM t) a
 sortChildrenOn func =
   ListT . joinL . liftM (fromList . sortOn f) . toList . runList . transformListMonad id
   where
