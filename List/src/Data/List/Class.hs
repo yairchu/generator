@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 
 -- | The 'List' class and actions for lists
 
@@ -194,7 +194,7 @@ lengthL = foldlL (const . (+ 1)) 0
 -- > > bfs (transformListMonad (\(Identity x) -> [x, x]) "hey" :: ListT [] Char)
 -- > "hheeeeyyyyyyyy"
 transformListMonad :: (List l, List k) =>
-    (forall x. ItemM l x -> ItemM k x) -> l a -> k a
+    (ItemM l (k a) -> ItemM k (k a)) -> l a -> k a
 transformListMonad trans =
     t . foldrL step (return mzero)
     where

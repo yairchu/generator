@@ -1,11 +1,10 @@
 Name:                ListTree
 Version:             0.2.0
 Category:            Algorithms
-Synopsis:            Combinatoric search using ListT
+Synopsis:            Trees and monadic trees expressed as monadic lists where the underlying monad is a list
 Description:
-    Searching and pruning
-    trees expressed as 'List's whose underlying monad
-    is also a List.
+    Directory tree structure expressed as a monadic tree.
+    Searching, pruning, iterating, and processing trees.
 License:             BSD3
 License-file:        LICENSE
 Author:              Yair Chuchem
