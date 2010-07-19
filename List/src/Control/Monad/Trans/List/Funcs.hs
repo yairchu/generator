@@ -7,7 +7,7 @@ module Control.Monad.Trans.List.Funcs
     ( iterateM, repeatM, repeat, fromList
     ) where
 
-import Control.Monad.ListT (ListT)
+import Control.Monad.Trans.List (ListT)
 import qualified Data.List.Class as ListFuncs
 import Prelude hiding (repeat)
 

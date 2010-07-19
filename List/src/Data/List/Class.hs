@@ -10,6 +10,7 @@ module Data.List.Class (
     -- | Standard list operations
     takeWhile, genericTake, scanl, scanl1,
     transpose, zip, zipWith,
+    concat, concatMap,
     -- | Non standard List operations
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
@@ -22,7 +23,7 @@ module Data.List.Class (
     listStateJoin
     ) where
 
-import Control.Monad (MonadPlus(..), liftM)
+import Control.Monad (MonadPlus(..), join, liftM)
 import Control.Monad.Trans.State (StateT(..), evalStateT, get)
 import Data.Function (fix)
 import Data.Functor.Identity (Identity(..))
@@ -30,7 +31,7 @@ import Data.List (sortBy)
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 import Prelude hiding (
-    filter, repeat, scanl, scanl1, takeWhile, zip, zipWith)
+    concat, concatMap, filter, repeat, scanl, scanl1, takeWhile, zip, zipWith)
 
 data ListItem l a =
     Nil |
@@ -294,3 +295,15 @@ listStateJoin list = do
     return . joinL . (`evalStateT` start) $ deconstructList (return mzero) onCons list
     where
         onCons x = liftM (cons x) . listStateJoin
+
+-- | Generalized 'concat'
+--
+-- For @List l => l (l a) -> l a@ use 'join'
+concat :: List l => l [a] -> l a
+concat = join . liftM fromList
+
+-- | Genereralized 'concatMap'
+--
+-- For @List l => (a -> l b) -> l a -> l b@ use '=<<' (monadic bind)
+concatMap :: List l => (a -> [b]) -> l a -> l b
+concatMap f = concat . liftM f
