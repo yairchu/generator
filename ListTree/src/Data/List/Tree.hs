@@ -93,37 +93,31 @@ bestFirstSearchOn = search . mergeOn
 
 mergeOnSortedHeads ::
   (Ord b, List l) => (a -> b) -> l (l a) -> l a
-mergeOnSortedHeads f ll =
-  joinL $ do
-    lli <- runList ll
-    case lli of
-      Nil -> return mzero
-      Cons l ls -> do
-        li <- runList l
-        return $ case li of
-          Nil -> mergeOnSortedHeads f ls
-          Cons x xs ->
-            cons x . mergeOnSortedHeads f $ bury xs ls
+mergeOnSortedHeads f sortedHeads =
+  -- naming convention for this func:
+  -- fooh = head foo
+  -- foot = tail foo
+  -- foo_ = foo reconstructed after deconstruction
+  -- (reconstructed so that monadic action isn't ran twice)
+  joinL $ step sortedHeads mzero $
+  \h t -> step h (mergeOnSortedHeads f t) $
+  \hh ht -> return . cons hh . mergeOnSortedHeads f $ bury ht t
   where
-    bury xx yyy =
-      joinL $ do
-        xi <- runList xx
-        case xi of
-          Nil -> return yyy
-          Cons x xs -> do
-            let rxx = cons x xs
-            yyi <- runList yyy
-            case yyi of
-              Nil -> return (cons rxx mzero)
-              Cons yy yys -> do
-                yi <- runList yy
-                return $ case yi of
-                  Nil -> bury xx yys
-                  Cons y ys ->
-                    let ryy = cons y ys
-                    in if f x <= f y
-                      then cons rxx . cons ryy $ yys
-                      else cons ryy . bury rxx $ yys
+    step list onNil onCons = do
+      li <- runList list
+      case li of
+        Nil -> return onNil
+        Cons x xs -> onCons x xs
+    cache x xs func = func (cons x xs)
+    bury a b =
+      joinL $ step a b $
+      \ah at -> cache ah at $
+      \a_ -> step b (cons a_ mzero) $
+      \bh bt -> step bh (bury a_ bt) $
+      \bhh bht -> cache bhh bht $
+      \bh_ -> return $ if f ah <= f bhh
+        then cons a_ . cons bh_ $ bt
+        else cons bh_ . bury a_ $ bt
 
 -- | Prune a tree or list given a predicate.
 -- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
@@ -143,9 +137,8 @@ pruneM cond list = do
 -- Example: Find smallest Pythagorian Triplets
 --
 -- > import Control.Monad
--- > import Control.Monad.DList (toListT)
 -- > import Control.Monad.Generator
--- > import Control.Monad.Trans
+-- > import Control.Monad.Trans.Class
 -- > import Data.List.Tree
 -- > import Data.Maybe
 -- >
@@ -153,7 +146,7 @@ pruneM cond list = do
 -- >   catMaybes .
 -- >   fmap fst .
 -- >   bestFirstSearchSortedChildrenOn snd .
--- >   toListT . generate $ do
+-- >   generate $ do
 -- >     x <- lift [1..]
 -- >     yield (Nothing, x)
 -- >     y <- lift [1..]
