@@ -11,11 +11,12 @@ module Data.List.Class (
     takeWhile, genericTake, scanl, scanl1,
     transpose, zip, zipWith,
     concat, concatMap,
+    tail,
     -- | Non standard List operations
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
     -- | Operations useful for monadic lists
-    execute, joinM, mapL, iterateM, takeWhileM, repeatM,
+    execute, joinM, mapL, filterL, iterateM, takeWhileM, repeatM,
     -- | Operations for non-monadic lists
     sortOn,
     -- | Convert between List types
@@ -31,7 +32,7 @@ import Data.List (sortBy)
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 import Prelude hiding (
-    concat, concatMap, filter, repeat, scanl, scanl1, takeWhile, zip, zipWith)
+    concat, concatMap, filter, repeat, scanl, scanl1, tail, takeWhile, zip, zipWith)
 
 data ListItem l a =
     Nil |
@@ -161,6 +162,16 @@ takeWhile = takeWhileM . fmap return
 repeatM :: List l => ItemM l a -> l a
 repeatM = joinM . repeat
 
+filterL :: List l => (a -> ItemM l Bool) -> l a -> l a
+filterL cond =
+    joinL . foldrL step (return mzero)
+    where
+        step x rest = do
+            b <- cond x
+            if b
+                then return . cons x . joinL $ rest
+                else rest
+
 takeWhileM :: List l => (a -> ItemM l Bool) -> l a -> l a
 takeWhileM cond =
     joinL . foldrL step (return mzero)
@@ -212,6 +223,9 @@ zip xx yy =
 -- because the other way around hlint compains "use zip".
 zipWith :: List l => (a -> b -> c) -> l a -> l b -> l c
 zipWith func as = liftM (uncurry func) . zip as
+
+tail :: List l => l a -> l a
+tail = joinL . liftM tailL . runList
 
 -- | Consume all items and return the last one
 --
