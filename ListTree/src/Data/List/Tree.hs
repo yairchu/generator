@@ -7,15 +7,12 @@
 -- which can also be seen as a tree, except only its leafs
 -- are accessible and only in "dfs order".
 --
--- > import Control.Monad.Generator
--- > import Control.Monad.Trans
--- > import Data.List.Class (genericTake, takeWhile, toList, lastL)
+-- > import Control.Monad.Trans.List.Funcs (repeatM)
+-- > import Data.List.Class (genericTake, scanl, takeWhile, toList, lastL)
+-- > import Prelude hiding (scanl, takeWhile)
 -- >
--- > bits = generate (t "")
--- > t prev = do
--- >   yield prev
--- >   x <- lift "01"
--- >   t (prev ++ [x])
+-- > appendToEnd xs x = xs ++ [x]
+-- > bits = scanl appendToEnd [] (repeatM "01")
 -- >
 -- > > take 3 (bfsLayers bits)
 -- > [[""],["0","1"],["00","01","10","11"]]
@@ -41,7 +38,7 @@
 -- > ["000","001","010","100","101"]
 --
 module Data.List.Tree (
-  Tree,
+  Tree, TreeT, TreeItemM,
   -- | Search algorithms
   dfs, bfs, bfsLayers,
   bestFirstSearchOn,
@@ -65,6 +62,9 @@ import Data.List.Class (
 -- | A 'type-class synonym' for Trees.
 class (List t, List (ItemM t)) => Tree t
 instance (List t, List (ItemM t)) => Tree t
+
+type TreeT m a = ListT (ListT m) a
+type TreeItemM t = ItemM (ItemM t)
 
 search :: (List l, MonadPlus (ItemM l)) =>
   (ItemM l (ItemM l a) -> ItemM l a) -> l a -> ItemM l a
@@ -176,7 +176,7 @@ bestFirstSearchSortedChildrenOn =
 -- and we prune any subtree whose lower bound is over the known upper bound.
 branchAndBound ::
   (Ord b, Tree t) => (a -> (Maybe b, Maybe b))
-  -> t a -> ListT (ListT (StateT (Maybe b) (ItemM (ItemM t)))) a
+  -> t a -> TreeT (StateT (Maybe b) (TreeItemM t)) a
 branchAndBound boundFunc =
   pruneM cond . transformListMonad (transformListMonad lift)
   where
