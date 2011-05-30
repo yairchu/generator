@@ -66,15 +66,14 @@ instance (List t, List (ItemM t)) => Tree t
 type TreeT m a = ListT (ListT m) a
 type TreeItemM t = ItemM (ItemM t)
 
-search :: (List l, MonadPlus (ItemM l)) =>
-  (ItemM l (ItemM l a) -> ItemM l a) -> l a -> ItemM l a
+search :: Tree t => (ItemM t (ItemM t a) -> ItemM t a) -> t a -> ItemM t a
 search merge =
   merge . foldrL step mzero
   where
     step a = return . cons a . merge
 
 -- | Iterate a tree in DFS pre-order. (Depth First Search)
-dfs :: (List l, MonadPlus (ItemM l)) => l a -> ItemM l a
+dfs :: Tree t => t a -> ItemM t a
 dfs = search join
 
 -- | Transform a tree into lists of the items in its different layers
