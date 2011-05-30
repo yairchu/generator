@@ -5,13 +5,16 @@
 module Data.List.Class (
     -- | The List typeclass
     List (..), ListItem (..),
+    fromList,
     -- | List operations for MonadPlus
-    cons, fromList, filter, repeat,
+    filter,
     -- | Standard list operations
+    repeat,
     takeWhile, genericTake, scanl, scanl1,
     transpose, zip, zipWith,
     concat, concatMap,
     tail,
+    enumFrom, enumFromTo,
     -- | Non standard List operations
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
@@ -32,12 +35,15 @@ import Data.List (sortBy)
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 import Prelude hiding (
-    concat, concatMap, filter, repeat, scanl, scanl1, tail, takeWhile, zip, zipWith)
+    concat, concatMap, enumFrom, enumFromTo, filter, repeat, scanl, scanl1,
+    tail, takeWhile, zip, zipWith)
 
 data ListItem l a =
     Nil |
     Cons { headL :: a, tailL :: l a }
     deriving (Eq, Ord, Read, Show)
+
+infixr 5 `cons`
 
 -- | A class for list types.
 -- Every list has an underlying monad.
@@ -49,12 +55,16 @@ class (MonadPlus l, Monad (ItemM l)) => List l where
     -- > > joinL $ Identity "hello"
     -- > "hello"
     joinL :: ItemM l (l a) -> l a
+    -- | cons. Can be derived from MonadPlus but is part of class for performance.
+    cons :: a -> l a -> l a
+    cons = mplus . return
 
 instance List [] where
     type ItemM [] = Identity
     runList [] = Identity Nil
     runList (x:xs) = Identity $ Cons x xs
     joinL = runIdentity
+    cons = (:)
 
 instance Functor m => Functor (ListItem m) where
     fmap _ Nil = Nil
@@ -85,19 +95,14 @@ foldrL consFunc nilFunc =
     where
         onCons x = consFunc x . foldrL consFunc nilFunc
 
-infixr 5 `cons`
--- | Prepend an item to a 'MonadPlus'
-cons :: MonadPlus m => a -> m a -> m a
-cons = mplus . return
-
 -- | Convert a list to a 'MonadPlus'
 --
 -- > > fromList [] :: Maybe Int
 -- > Nothing
 -- > > fromList [5] :: Maybe Int
 -- > Just 5
-fromList :: MonadPlus m => [a] -> m a
-fromList = foldr (mplus . return) mzero
+fromList :: List l => [a] -> l a
+fromList = foldr cons mzero
 
 -- | filter for any MonadPlus
 --
@@ -234,7 +239,7 @@ tail = joinL . liftM tailL . runList
 lastL :: List l => l a -> ItemM l a
 lastL = liftM fromJust . foldlL (const Just) Nothing
 
-repeat :: MonadPlus m => a -> m a
+repeat :: List l => a -> l a
 repeat = fix . cons
 
 transpose :: List l => l (l a) -> l (l a)
@@ -321,3 +326,11 @@ concat = join . liftM fromList
 -- For @List l => (a -> l b) -> l a -> l b@ use '=<<' (monadic bind)
 concatMap :: List l => (a -> [b]) -> l a -> l b
 concatMap f = concat . liftM f
+
+enumFrom :: (List l, Enum a) => a -> l a
+enumFrom x = cons x (enumFrom (succ x))
+
+enumFromTo :: (List l, Eq a, Enum a) => a -> a -> l a
+enumFromTo from to
+    | from == to = return from
+    | otherwise = cons from (enumFromTo (succ from) to)

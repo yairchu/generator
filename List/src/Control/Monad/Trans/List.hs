@@ -41,11 +41,6 @@ foldrL' consFunc nilFunc =
     where
         step x = return . consFunc x . joinL
 
--- like generic cons except using that one
--- would cause an infinite loop
-cons :: Monad m => a -> ListT m a -> ListT m a
-cons x = ListT . return . Cons x
-
 instance Monad m => Monoid (ListT m a) where
     mempty = ListT $ return Nil
     mappend = flip (foldrL' cons)
@@ -72,6 +67,7 @@ instance Monad m => List (ListT m) where
     type ItemM (ListT m) = m
     runList = runListT
     joinL = ListT . (>>= runList)
+    cons x = ListT . return . Cons x
 
 instance MonadIO m => MonadIO (ListT m) where
     liftIO = lift . liftIO
