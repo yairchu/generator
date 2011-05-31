@@ -330,7 +330,7 @@ concatMap f = concat . liftM f
 enumFrom :: (List l, Enum a) => a -> l a
 enumFrom x = cons x (enumFrom (succ x))
 
-enumFromTo :: (List l, Eq a, Enum a) => a -> a -> l a
+enumFromTo :: (List l, Enum a) => a -> a -> l a
 enumFromTo from to
-    | from == to = return from
+    | fromEnum from > fromEnum to = mzero
     | otherwise = cons from (enumFromTo (succ from) to)
