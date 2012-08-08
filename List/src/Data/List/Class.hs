@@ -10,7 +10,7 @@ module Data.List.Class (
     filter,
     -- | Standard list operations
     repeat,
-    takeWhile, genericTake, scanl, scanl1,
+    take, takeWhile, genericTake, scanl, scanl1,
     transpose, zip, zipWith,
     concat, concatMap,
     tail,
@@ -20,7 +20,7 @@ module Data.List.Class (
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
     -- | Operations useful for monadic lists
-    execute, joinM, mapL, filterL, iterateM, takeWhileM, repeatM,
+    execute, joinM, mapL, filterL, iterateM, takeWhileM, repeatM, splitAtM,
     -- | Operations for non-monadic lists
     sortOn,
     -- | Convert between List types
@@ -37,7 +37,7 @@ import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 import Prelude hiding (
     concat, concatMap, enumFrom, enumFromTo, filter, repeat, scanl, scanl1,
-    tail, takeWhile, zip, zipWith)
+    tail, take, takeWhile, zip, zipWith)
 
 data ListItem l a =
     Nil |
@@ -143,6 +143,9 @@ genericTake count
     | otherwise = deconstructList' mzero onCons
     where
         onCons x = cons x . genericTake (count - 1)
+
+take :: List l => Int -> l a -> l a
+take = genericTake
 
 -- | Execute the monadic actions in a 'List'
 execute :: List l => l a -> ItemM l ()
@@ -300,6 +303,19 @@ iterateM step startM =
         return . cons start
             . iterateM step
             . step $ start
+
+-- | Monadic variant of splitAt.
+-- Consumes x items from the list and return them with the remaining monadic list.
+splitAtM :: List l => Int -> l a -> ItemM l ([a], l a)
+splitAtM at list
+    | at <= 0 = return ([], list)
+    | otherwise = do
+        item <- runList list
+        case item of
+            Nil -> return ([], mzero)
+            Cons x xs -> do
+                (pre, post) <- splitAtM (at-1) xs
+                return (x:pre, post)
 
 -- | listStateJoin can transform a
 -- @ListT (StateT s m) a@ to a @StateT s m (ListT m a)@.
