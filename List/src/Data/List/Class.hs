@@ -15,6 +15,7 @@ module Data.List.Class (
     concat, concatMap,
     tail,
     enumFrom, enumFromTo,
+    catMaybes, mapMaybe,
     -- | Non standard List operations
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
@@ -326,6 +327,16 @@ concat = join . liftM fromList
 -- For @List l => (a -> l b) -> l a -> l b@ use '=<<' (monadic bind)
 concatMap :: List l => (a -> [b]) -> l a -> l b
 concatMap f = concat . liftM f
+
+catMaybes :: List l => l (Maybe a) -> l a
+catMaybes =
+    concatMap f
+    where
+        f Nothing = mzero
+        f (Just x) = return x
+
+mapMaybe :: List l => (a -> Maybe b) -> l a -> l b
+mapMaybe f = catMaybes . liftM f
 
 enumFrom :: (List l, Enum a) => a -> l a
 enumFrom x = cons x (enumFrom (succ x))
