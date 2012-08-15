@@ -15,9 +15,7 @@ module Data.List.Class (
     concat, concatMap,
     tail,
     enumFrom, enumFromTo,
-    catMaybes,
-    -- mapMaybe will be reintroduced in List-0.5.0
-    -- Removed from List-0.4.4 to unbreak hexpat-0.20.2
+    catMaybes, mapMaybe,
     -- Which broke with the release of List-0.4.3 due to unqualified imports.
     -- | Non standard List operations
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
@@ -354,9 +352,8 @@ catMaybes =
         f Nothing = mzero
         f (Just x) = return x
 
--- To be reintroduced in List 0.5.0
--- mapMaybe :: List l => (a -> Maybe b) -> l a -> l b
--- mapMaybe f = catMaybes . liftM f
+mapMaybe :: List l => (a -> Maybe b) -> l a -> l b
+mapMaybe f = catMaybes . liftM f
 
 enumFrom :: (List l, Enum a) => a -> l a
 enumFrom x = cons x (enumFrom (succ x))
