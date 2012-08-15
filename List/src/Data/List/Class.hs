@@ -16,7 +16,6 @@ module Data.List.Class (
     tail,
     enumFrom, enumFromTo,
     catMaybes, mapMaybe,
-    -- Which broke with the release of List-0.4.3 due to unqualified imports.
     -- | Non standard List operations
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
