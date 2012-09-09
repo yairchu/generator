@@ -20,7 +20,8 @@ module Data.List.Class (
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
     -- | Operations useful for monadic lists
-    execute, joinM, mapL, filterL, iterateM, takeWhileM, repeatM, splitAtM,
+    execute, joinM, mapL, filterL, iterateM, takeWhileM, repeatM,
+    splitAtM, splitWhenM,
     -- | Operations for non-monadic lists
     sortOn,
     -- | Convert between List types
@@ -316,6 +317,21 @@ splitAtM at list
             Cons x xs -> do
                 (pre, post) <- splitAtM (at-1) xs
                 return (x:pre, post)
+
+-- | Monadic variant of break.
+-- Consumes items from the list until a condition holds.
+splitWhenM :: List l => (a -> ItemM l Bool) -> l a -> ItemM l ([a], l a)
+splitWhenM cond list = do
+    item <- runList list
+    case item of
+        Nil -> return ([], mzero)
+        Cons x xs -> do
+            isSplit <- cond x
+            if isSplit
+                then return ([], cons x xs)
+                else do
+                    (pre, post) <- splitWhenM cond xs
+                    return (x:pre, post)
 
 -- | listStateJoin can transform a
 -- @ListT (StateT s m) a@ to a @StateT s m (ListT m a)@.
