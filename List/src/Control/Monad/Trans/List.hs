@@ -20,7 +20,7 @@ module Control.Monad.Trans.List (ListT(..)) where
 
 import Data.List.Class (List(..), ListItem(..), foldrL)
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Alternative(..), Applicative(..))
 import Control.Monad (MonadPlus(..), ap, liftM)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -55,6 +55,10 @@ instance Monad m => Monad (ListT m) where
 instance Monad m => Applicative (ListT m) where
     pure = return
     (<*>) = ap
+
+instance Monad m => Alternative (ListT m) where
+    empty = mempty
+    (<|>) = mappend
 
 instance Monad m => MonadPlus (ListT m) where
     mzero = mempty
