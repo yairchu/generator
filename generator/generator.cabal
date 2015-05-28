@@ -1,5 +1,5 @@
 Name:                generator
-Version:             0.5.5
+Version:             0.5.6
 Category:            Control
 Synopsis:            Python-generators notation for creation of monadic lists
 Description:
