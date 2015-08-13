@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, TypeFamilies, UndecidableInstances #-}
 
 -- | Functions for iterating trees.
 -- A 'List' whose underlying monad is also a 'List' is a tree.
