@@ -1,5 +1,5 @@
 Name:                List
-Version:             0.5.3
+Version:             0.6.0
 Category:            Control
 Synopsis:            List monad transformer and class
 Description:
@@ -19,7 +19,6 @@ Library
   Extensions:
   Build-Depends:       base >= 3 && < 5, transformers >= 0.2
   Exposed-modules:     Control.Monad.ListT,
-                       Control.Monad.Trans.List,
-                       Control.Monad.Trans.List.Funcs,
+                       Control.Monad.ListT.Funcs,
                        Data.List.Class
   Ghc-Options:         -O2 -Wall

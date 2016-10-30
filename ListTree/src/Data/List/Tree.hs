@@ -7,7 +7,7 @@
 -- which can also be seen as a tree, except only its leafs
 -- are accessible and only in "dfs order".
 --
--- > import Control.Monad.Trans.List.Funcs (repeatM)
+-- > import Control.Monad.ListT.Funcs (repeatM)
 -- > import Data.List.Class (genericTake, scanl, takeWhile, toList, lastL)
 -- > import Prelude hiding (scanl, takeWhile)
 -- >

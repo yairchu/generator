@@ -3,11 +3,11 @@
 --
 -- Functions where the @List@ is an input type and not only the result type do not need special limited versions.
 
-module Control.Monad.Trans.List.Funcs
+module Control.Monad.ListT.Funcs
     ( iterateM, repeatM, repeat, fromList
     ) where
 
-import Control.Monad.Trans.List (ListT)
+import Control.Monad.ListT (ListT)
 import qualified Data.List.Class as ListFuncs
 import Prelude hiding (repeat)
 
