@@ -1,0 +1,5 @@
+packages:
+- 'List'
+- 'ListTree'
+- 'generator'
+resolver: lts-7.9
