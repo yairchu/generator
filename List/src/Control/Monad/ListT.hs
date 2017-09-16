@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, TypeFamilies, UndecidableInstances #-}
+{-# LANGUAGE CPP, FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, TypeFamilies, UndecidableInstances #-}
 
 -- | A list monad transformer / a monadic list.
 --
@@ -29,6 +29,9 @@ import Control.Applicative (Alternative(..), Applicative(..))
 import Control.Monad (MonadPlus(..), ap, liftM)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
+#if MIN_VERSION_base(4,9,0)
+import Data.Semigroup (Semigroup(..))
+#endif
 import Data.Monoid (Monoid(..))
 
 newtype ListT m a =
@@ -46,9 +49,16 @@ foldrL' consFunc nilFunc =
     where
         step x = return . consFunc x . joinL
 
+#if MIN_VERSION_base(4,9,0)
+instance Monad m => Semigroup (ListT m a) where
+    (<>) = flip (foldrL' cons)
+#endif
+
 instance Monad m => Monoid (ListT m a) where
     mempty = ListT $ return Nil
+#if !(MIN_VERSION_base(4,11,0))
     mappend = flip (foldrL' cons)
+#endif
 
 instance Monad m => Functor (ListT m) where
     fmap func = foldrL' (cons . func) mempty
