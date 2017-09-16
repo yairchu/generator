@@ -52,7 +52,7 @@ instance MonadTrans (GeneratorT v) where
 generate :: Monad m => GeneratorT v m () -> ListT m v
 generate = (`runContT` const mempty) . runGeneratorT
 
-modifyRes :: Monad m => (ListT m a -> ListT m a) -> GeneratorT a m ()
+modifyRes :: (ListT m a -> ListT m a) -> GeneratorT a m ()
 modifyRes = GeneratorT . (`mapContT` return ())
 
 yield :: Monad m => v -> GeneratorT v m ()
