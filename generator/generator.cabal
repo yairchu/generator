@@ -10,7 +10,7 @@ License:             BSD3
 License-file:        LICENSE
 Author:              Yair Chuchem
 Maintainer:          yairchu@gmail.com
-Homepage:            http://github.com/yairchu/generator/tree
+Homepage:            http://github.com/yairchu/generator
 Cabal-Version:       >= 1.2
 Stability:           experiemental
 Build-type:          Simple
