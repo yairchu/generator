@@ -8,3 +8,4 @@
 dist
 testProducers
 .stack-work/
+.DS_Store
