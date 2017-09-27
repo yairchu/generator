@@ -1,3 +1,7 @@
+0.6.2
+----
+* `ListT`'s `Functor` instance doesn't require an underlying `Monad`.
+
 0.6.1
 ----
 * Compatibility with Semigroup/Monoid proposal
