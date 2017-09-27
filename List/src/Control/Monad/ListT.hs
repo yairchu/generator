@@ -60,8 +60,12 @@ instance Monad m => Monoid (ListT m a) where
     mappend = flip (foldrL' cons)
 #endif
 
-instance Monad m => Functor (ListT m) where
-    fmap func = foldrL' (cons . func) mempty
+instance Functor m => Functor (ListT m) where
+    fmap func (ListT action) =
+        ListT (fmap f action)
+        where
+            f Nil = Nil
+            f (Cons x xs) = Cons (func x) (fmap func xs)
 
 instance Monad m => Monad (ListT m) where
     return = ListT . return . (`Cons` mempty)
