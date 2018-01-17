@@ -58,6 +58,7 @@ import Data.List.Class (
   List(..), ListItem(..), cons,
   foldrL, fromList, mergeOn, transpose,
   sortOn, toList, transformListMonad)
+import Data.Maybe (isNothing)
 
 -- | A 'type-class synonym' for Trees.
 class (List t, List (ItemM t)) => Tree t
@@ -188,7 +189,7 @@ branchAndBound boundFunc =
           -- so upper bound won't be calculated if not needed.
           -- this optiminzation is based on (upper >= lower)
           when
-            ( Nothing == upperSoFar
+            ( isNothing upperSoFar
             || Just True == liftM2 (<) upper upperSoFar
             ) (lift (put upper))
           return True
