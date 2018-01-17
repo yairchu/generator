@@ -38,7 +38,7 @@ instance Monad m => Functor (GeneratorT v m) where
     fmap = liftM
 
 instance Monad m => Monad (GeneratorT v m) where
-    return = GeneratorT . return
+    return = GeneratorT . pure
     GeneratorT a >>= f = GeneratorT $ a >>= runGeneratorT . f
     fail = lift . fail
 
@@ -53,7 +53,7 @@ generate :: Monad m => GeneratorT v m () -> ListT m v
 generate = (`runContT` const mempty) . runGeneratorT
 
 modifyRes :: (ListT m a -> ListT m a) -> GeneratorT a m ()
-modifyRes = GeneratorT . (`mapContT` return ())
+modifyRes = GeneratorT . (`mapContT` pure ())
 
 yield :: Monad m => v -> GeneratorT v m ()
 yield = modifyRes . cons

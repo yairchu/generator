@@ -49,8 +49,8 @@ module Data.List.Tree (
   branchAndBound
   ) where
 
-import Control.Monad (
-  MonadPlus(..), guard, join, liftM, liftM2, when)
+import Control.Applicative (Alternative(..), liftA2)
+import Control.Monad (MonadPlus(..), guard, join, when)
 import Control.Monad.ListT (ListT(..))
 import Control.Monad.Trans.State (StateT, get, put)
 import Control.Monad.Trans.Class (MonadTrans(lift))
@@ -69,9 +69,9 @@ type TreeItemM t = ItemM (ItemM t)
 
 search :: Tree t => (ItemM t (ItemM t a) -> ItemM t a) -> t a -> ItemM t a
 search merge =
-  merge . foldrL step mzero
+  merge . foldrL step empty
   where
-    step a = return . cons a . merge
+    step a = pure . cons a . merge
 
 -- | Iterate a tree in DFS pre-order. (Depth First Search)
 dfs :: Tree t => t a -> ItemM t a
@@ -79,8 +79,7 @@ dfs = search join
 
 -- | Transform a tree into lists of the items in its different layers
 bfsLayers :: Tree t => t a -> ItemM t (ItemM t a)
-bfsLayers =
-  search (liftM join . transpose) . liftM return
+bfsLayers = search (fmap join . transpose) . fmap pure
 
 -- | Iterate a tree in BFS order. (Breadth First Search)
 bfs :: Tree t => t a -> ItemM t a
@@ -99,23 +98,23 @@ mergeOnSortedHeads f sortedHeads =
   -- foot = tail foo
   -- foo_ = foo reconstructed after deconstruction
   -- (reconstructed so that monadic action isn't ran twice)
-  joinL $ step sortedHeads mzero $
+  joinL $ step sortedHeads empty $
   \h t -> step h (mergeOnSortedHeads f t) $
-  \hh ht -> return . cons hh . mergeOnSortedHeads f $ bury ht t
+  \hh ht -> pure . cons hh . mergeOnSortedHeads f $ bury ht t
   where
     step list onNil onCons = do
       li <- runList list
       case li of
-        Nil -> return onNil
+        Nil -> pure onNil
         Cons x xs -> onCons x xs
     cache x xs func = func (cons x xs)
     bury a b =
       joinL $ step a b $
       \ah at -> cache ah at $
-      \a_ -> step b (cons a_ mzero) $
+      \a_ -> step b (cons a_ empty) $
       \bh bt -> step bh (bury a_ bt) $
       \bhh bht -> cache bhh bht $
-      \bh_ -> return $ if f ah <= f bhh
+      \bh_ -> pure $ if f ah <= f bhh
         then cons a_ . cons bh_ $ bt
         else cons bh_ . bury a_ $ bt
 
@@ -123,14 +122,14 @@ mergeOnSortedHeads f sortedHeads =
 -- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
 -- prune "cuts" the whole branch (the underlying MonadPlus's mzero).
 prune :: MonadPlus m => (a -> Bool) -> ListT m a -> ListT m a
-prune = pruneM . fmap return
+prune = pruneM . fmap pure
 
 pruneM :: MonadPlus m => (a -> m Bool) -> ListT m a -> ListT m a
 pruneM cond list = do
   x <- list
   lift (cond x >>= guard)
-  return x
-  
+  pure x
+
 -- | Best-First-Search given that a node's children are in sorted order (best first) and given a scoring function.
 -- Especially useful for trees where nodes have an infinite amount of children, where 'bestFirstSearchOn' will get stuck.
 --
@@ -182,23 +181,23 @@ branchAndBound boundFunc =
   where
     cond x = do
       upperSoFar <- lift get
-      if Just True == liftM2 (>=) lower upperSoFar
-        then return False
+      if Just True == liftA2 (>=) lower upperSoFar
+        then pure False
         else do
           -- this "when" clause isn't before the if,
           -- so upper bound won't be calculated if not needed.
           -- this optiminzation is based on (upper >= lower)
           when
             ( isNothing upperSoFar
-            || Just True == liftM2 (<) upper upperSoFar
+            || Just True == liftA2 (<) upper upperSoFar
             ) (lift (put upper))
-          return True
+          pure True
       where
         (lower, upper) = boundFunc x
 
 sortChildrenOn :: (Ord b, Tree t) => (a -> b) -> t a -> ListT (ItemM t) a
 sortChildrenOn func =
-  ListT . joinL . liftM (fromList . sortOn f) . toList . runList . transformListMonad id
+  ListT . joinL . fmap (fromList . sortOn f) . toList . runList . transformListMonad id
   where
     f (Cons x _) = Just (func x)
     f _ = Nothing

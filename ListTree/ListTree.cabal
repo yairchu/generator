@@ -1,5 +1,5 @@
 Name:                ListTree
-Version:             0.2.4
+Version:             0.3.0
 Category:            Algorithms
 Synopsis:            Trees and monadic trees expressed as monadic lists where the underlying monad is a list
 Description:
@@ -17,7 +17,7 @@ Build-type:          Simple
 Library
   hs-Source-Dirs:      src
   Extensions:
-  Build-Depends:       base >= 3 && < 5, directory >= 1.0 && < 2.0, filepath >= 1.1 && < 2.0, transformers >= 0.2, List >= 0.4.0
+  Build-Depends:       base >= 4.8, directory >= 1.0 && < 2.0, filepath >= 1.1 && < 2.0, transformers >= 0.2, List >= 0.7.0
   Exposed-modules:     Data.List.Tree
                        System.Directory.ListTree
   Ghc-Options:         -O2 -Wall

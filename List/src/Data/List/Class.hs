@@ -29,7 +29,8 @@ module Data.List.Class (
     listStateJoin
     ) where
 
-import Control.Monad (MonadPlus(..), join, liftM)
+import Control.Applicative (Alternative(..))
+import Control.Monad (MonadPlus(..), join)
 import Control.Monad.Trans.State (StateT(..), evalStateT, get)
 import Data.Function (fix)
 import Data.Functor.Identity (Identity(..))
@@ -49,7 +50,7 @@ infixr 5 `cons`
 
 -- | A class for list types.
 -- Every list has an underlying monad.
-class (MonadPlus l, Monad (ItemM l)) => List l where
+class (Alternative l, Monad (ItemM l)) => List l where
     type ItemM l :: * -> *
     runList :: l a -> ItemM l (ListItem l a)
     -- | Transform an action returning a list to the returned list
@@ -57,9 +58,9 @@ class (MonadPlus l, Monad (ItemM l)) => List l where
     -- > > joinL $ Identity "hello"
     -- > "hello"
     joinL :: ItemM l (l a) -> l a
-    -- | cons. Can be derived from MonadPlus but is part of class for performance.
+    -- | cons. Can be derived from Alternative but is part of class for performance.
     cons :: a -> l a -> l a
-    cons = mplus . return
+    cons = (<|>) . pure
 
 instance List [] where
     type ItemM [] = Identity
@@ -85,9 +86,9 @@ deconstructList onNil onCons list = do
 
 deconstructList' :: List l => l r -> (a -> l a -> l r) -> l a -> l r
 deconstructList' onNil onCons =
-    joinL . deconstructList (return onNil) onCons'
+    joinL . deconstructList (pure onNil) onCons'
     where
-        onCons' x = return . onCons x
+        onCons' x = pure . onCons x
 
 -- | foldr for 'List's.
 -- the result and 'right side' values are monadic actions.
@@ -97,14 +98,14 @@ foldrL consFunc nilFunc =
     where
         onCons x = consFunc x . foldrL consFunc nilFunc
 
--- | Convert a list to a 'MonadPlus'
+-- | Convert a list to a 'List'
 --
 -- > > fromList [] :: Maybe Int
 -- > Nothing
 -- > > fromList [5] :: Maybe Int
 -- > Just 5
 fromList :: List l => [a] -> l a
-fromList = foldr cons mzero
+fromList = foldr cons empty
 
 -- | filter for any MonadPlus
 --
@@ -115,13 +116,13 @@ filter cond =
     (>>= f)
     where
         f x
-            | cond x = return x
+            | cond x = pure x
             | otherwise = mzero
 
 -- | An action to do foldl for 'List's
 foldlL :: List l => (a -> b -> a) -> a -> l b -> ItemM l a
 foldlL step startVal =
-    deconstructList (return startVal) onCons
+    deconstructList (pure startVal) onCons
     where
         onCons x xs =
             let v = step startVal x
@@ -133,15 +134,15 @@ foldl1L = deconstructList (error "foldl1L: empty list") . foldlL
 
 scanl :: List l => (a -> b -> a) -> a -> l b -> l a
 scanl step startVal =
-    cons startVal . deconstructList' mzero (scanl step . step startVal)
+    cons startVal . deconstructList' empty (scanl step . step startVal)
 
 scanl1 :: List l => (a -> a -> a) -> l a -> l a
-scanl1 = deconstructList' mzero . scanl
+scanl1 = deconstructList' empty . scanl
 
 genericTake :: (Integral i, List l) => i -> l a -> l a
 genericTake count
-    | count <= 0 = const mzero
-    | otherwise = deconstructList' mzero onCons
+    | count <= 0 = const empty
+    | otherwise = deconstructList' empty onCons
     where
         onCons x = cons x . genericTake (count - 1)
 
@@ -158,39 +159,38 @@ execute = foldlL const ()
 -- > [4,7]
 joinM :: List l => l (ItemM l a) -> l a
 joinM =
-    joinL . foldrL consFunc (return mzero)
+    joinL . foldrL consFunc (pure empty)
     where
-        consFunc action rest =
-            liftM (`cons` joinL rest) action
+        consFunc action rest = fmap (`cons` joinL rest) action
 
 mapL :: List l => (a -> ItemM l b) -> l a -> l b
-mapL func = joinM . liftM func
+mapL func = joinM . fmap func
 
 takeWhile :: List l => (a -> Bool) -> l a -> l a
-takeWhile = takeWhileM . fmap return
+takeWhile = takeWhileM . fmap pure
 
 repeatM :: List l => ItemM l a -> l a
 repeatM = joinM . repeat
 
 filterL :: List l => (a -> ItemM l Bool) -> l a -> l a
 filterL cond =
-    joinL . foldrL step (return mzero)
+    joinL . foldrL step (pure empty)
     where
         step x rest = do
             b <- cond x
             if b
-                then return . cons x . joinL $ rest
+                then pure . cons x . joinL $ rest
                 else rest
 
 takeWhileM :: List l => (a -> ItemM l Bool) -> l a -> l a
 takeWhileM cond =
-    joinL . foldrL step (return mzero)
+    joinL . foldrL step (pure empty)
     where
         step x rest = do
             b <- cond x
             if b
-                then return . cons x . joinL $ rest
-                else return mzero
+                then pure . cons x . joinL $ rest
+                else pure empty
 
 -- | An action to transform a 'List' to a list
 --
@@ -198,9 +198,9 @@ takeWhileM cond =
 -- > "hello!"
 toList :: List l => l a -> ItemM l [a]
 toList =
-    foldrL step (return [])
+    foldrL step (pure [])
     where
-        step = liftM . (:)
+        step = fmap . (:)
 
 -- | Consume a list (execute its actions) and return its length
 --
@@ -217,32 +217,32 @@ lengthL = foldlL (const . (+ 1)) 0
 transformListMonad :: (List l, List k) =>
     (ItemM l (k a) -> ItemM k (k a)) -> l a -> k a
 transformListMonad trans =
-    t . foldrL step (return mzero)
+    t . foldrL step (pure empty)
     where
         t = joinL . trans
-        step x = return . cons x . t
+        step x = pure . cons x . t
 
 zip :: List l => l a -> l b -> l (a, b)
 zip xx yy =
-    deconstructList' mzero onConsX xx
+    deconstructList' empty onConsX xx
     where
-        onConsX x xs = deconstructList' mzero (onConsXY x xs) yy
+        onConsX x xs = deconstructList' empty (onConsXY x xs) yy
         onConsXY x xs y ys = cons (x, y) $ zip xs ys
 
 -- zipWith based on zip and not vice versa,
 -- because the other way around hlint compains "use zip".
 zipWith :: List l => (a -> b -> c) -> l a -> l b -> l c
-zipWith func as = liftM (uncurry func) . zip as
+zipWith func as = fmap (uncurry func) . zip as
 
 tail :: List l => l a -> l a
-tail = joinL . liftM tailL . runList
+tail = joinL . fmap tailL . runList
 
 -- | Consume all items and return the last one
 --
 -- > > runIdentity $ lastL "hello"
 -- > 'o'
 lastL :: List l => l a -> ItemM l a
-lastL = liftM fromJust . foldlL (const Just) Nothing
+lastL = fmap fromJust . foldlL (const Just) Nothing
 
 repeat :: List l => a -> l a
 repeat = fix . cons
@@ -253,8 +253,8 @@ transpose matrix =
     where
         r xs = do
             items <- mapM runList xs
-            return $ case filter isCons items of
-                [] -> mzero
+            pure $ case filter isCons items of
+                [] -> empty
                 citems ->
                     cons (fromList (map headL citems)) .
                     joinL . r $ map tailL citems
@@ -266,7 +266,7 @@ transpose matrix =
 -- > > mergeOn length [["hi", "hey", "hello"], ["cat", "falcon"], ["banana", "cucumber"]]
 -- > ["hi","cat","hey","hello","banana","falcon","cucumber"]
 mergeOn :: (Ord b, List l) => (a -> b) -> l (l a) -> l a
-mergeOn f = joinL . foldlL (merge2On f) mzero
+mergeOn f = joinL . foldlL (merge2On f) empty
 
 -- | Merge two lists sorted by a criteria given the criteria
 --
@@ -277,13 +277,13 @@ merge2On f xx yy =
     joinL $ do
         xi <- runList xx
         yi <- runList yy
-        return $ case (xi, yi) of
+        pure $ case (xi, yi) of
             (Cons x xs, Cons y ys)
                 | f y > f x -> cons x . merge2On f xs $ cons y ys
                 | otherwise -> cons y $ merge2On f (cons x xs) ys
             (Cons x xs, Nil) -> cons x xs
             (Nil, Cons y ys) -> cons y ys
-            (Nil, Nil) -> mzero
+            (Nil, Nil) -> empty
 
 -- sorts require looking at the whole list
 -- even before the consumption of the first result element,
@@ -301,7 +301,7 @@ iterateM :: List l => (a -> ItemM l a) -> ItemM l a -> l a
 iterateM step startM =
     joinL $ do
         start <- startM
-        return . cons start
+        pure . cons start
             . iterateM step
             . step $ start
 
@@ -309,14 +309,14 @@ iterateM step startM =
 -- Consumes x items from the list and return them with the remaining monadic list.
 splitAtM :: List l => Int -> l a -> ItemM l ([a], l a)
 splitAtM at list
-    | at <= 0 = return ([], list)
+    | at <= 0 = pure ([], list)
     | otherwise = do
         item <- runList list
         case item of
-            Nil -> return ([], mzero)
+            Nil -> pure ([], empty)
             Cons x xs -> do
                 (pre, post) <- splitAtM (at-1) xs
-                return (x:pre, post)
+                pure (x:pre, post)
 
 -- | Monadic variant of break.
 -- Consumes items from the list until a condition holds.
@@ -324,14 +324,14 @@ splitWhenM :: List l => (a -> ItemM l Bool) -> l a -> ItemM l ([a], l a)
 splitWhenM cond list = do
     item <- runList list
     case item of
-        Nil -> return ([], mzero)
+        Nil -> pure ([], empty)
         Cons x xs -> do
             isSplit <- cond x
             if isSplit
-                then return ([], cons x xs)
+                then pure ([], cons x xs)
                 else do
                     (pre, post) <- splitWhenM cond xs
-                    return (x:pre, post)
+                    pure (x:pre, post)
 
 -- | listStateJoin can transform a
 -- @ListT (StateT s m) a@ to a @StateT s m (ListT m a)@.
@@ -344,36 +344,36 @@ listStateJoin :: (List l, List k, ItemM l ~ StateT s (ItemM k))
     => l a -> ItemM l (k a)
 listStateJoin list = do
     start <- get
-    return . joinL . (`evalStateT` start) $ deconstructList (return mzero) onCons list
+    pure . joinL . (`evalStateT` start) $ deconstructList (pure empty) onCons list
     where
-        onCons x = liftM (cons x) . listStateJoin
+        onCons x = fmap (cons x) . listStateJoin
 
 -- | Generalized 'concat'
 --
 -- For @List l => l (l a) -> l a@ use 'join'
-concat :: List l => l [a] -> l a
-concat = join . liftM fromList
+concat :: (Monad l, List l) => l [a] -> l a
+concat = join . fmap fromList
 
 -- | Genereralized 'concatMap'
 --
 -- For @List l => (a -> l b) -> l a -> l b@ use '=<<' (monadic bind)
-concatMap :: List l => (a -> [b]) -> l a -> l b
-concatMap f = concat . liftM f
+concatMap :: (Monad l, List l) => (a -> [b]) -> l a -> l b
+concatMap f = concat . fmap f
 
-catMaybes :: List l => l (Maybe a) -> l a
+catMaybes :: (Monad l, List l) => l (Maybe a) -> l a
 catMaybes =
     concatMap f
     where
-        f Nothing = mzero
-        f (Just x) = return x
+        f Nothing = empty
+        f (Just x) = pure x
 
-mapMaybe :: List l => (a -> Maybe b) -> l a -> l b
-mapMaybe f = catMaybes . liftM f
+mapMaybe :: (Monad l, List l) => (a -> Maybe b) -> l a -> l b
+mapMaybe f = catMaybes . fmap f
 
 enumFrom :: (List l, Enum a) => a -> l a
 enumFrom x = cons x (enumFrom (succ x))
 
 enumFromTo :: (List l, Enum a) => a -> a -> l a
 enumFromTo from to
-    | fromEnum from > fromEnum to = mzero
+    | fromEnum from > fromEnum to = empty
     | otherwise = cons from (enumFromTo (succ from) to)
