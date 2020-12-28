@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, TypeFamilies, UndecidableInstances #-}
+{-# LANGUAGE CPP, FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, TypeFamilies, UndecidableInstances, DeriveTraversable, DerivingStrategies #-}
 
 -- | A list monad transformer / a monadic list.
 --
@@ -31,6 +31,7 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
 
 newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
+    deriving stock (Functor, Foldable, Traversable)
 
 deriving instance (Eq (m (ListItem (ListT m) a))) => Eq (ListT m a)
 deriving instance (Ord (m (ListItem (ListT m) a))) => Ord (ListT m a)
@@ -50,28 +51,18 @@ instance Monad m => Semigroup (ListT m a) where
 instance Monad m => Monoid (ListT m a) where
     mempty = ListT (pure Nil)
 
-instance Functor m => Functor (ListT m) where
-    fmap func (ListT action) =
-        ListT (fmap f action)
-        where
-            f Nil = Nil
-            f (Cons x xs) = Cons (func x) (fmap func xs)
-
-instance Monad m => Monad (ListT m) where
-    return = ListT . pure . (`Cons` mempty)
-    a >>= b = foldrL' mappend mempty (fmap b a)
-
 instance Monad m => Applicative (ListT m) where
-    pure = return
+    pure = ListT . pure . (`Cons` mempty)
     (<*>) = ap
 
 instance Monad m => Alternative (ListT m) where
     empty = mempty
     (<|>) = mappend
 
-instance Monad m => MonadPlus (ListT m) where
-    mzero = mempty
-    mplus = mappend
+instance Monad m => Monad (ListT m) where
+    a >>= b = foldrL' mappend mempty (fmap b a)
+
+instance Monad m => MonadPlus (ListT m)
 
 instance MonadTrans ListT where
     lift = ListT . fmap (`Cons` mempty)

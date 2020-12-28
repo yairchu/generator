@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances, DeriveFunctor, DerivingStrategies, GeneralisedNewtypeDeriving #-}
 
 -- | A monad transformer for the creation of Lists.
 -- Similar to Python's generators.
@@ -20,7 +20,7 @@ module Control.Monad.Generator (
     GeneratorT(..), generate, yield, breakGenerator
     ) where
 
-import Control.Monad (liftM, ap)
+import Control.Monad (ap)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -31,20 +31,18 @@ import Data.List.Class (cons)
 -- 'generate' transforms a "GeneratorT v m a" to a "ListT m a".
 newtype GeneratorT v m a =
     GeneratorT { runGeneratorT :: ContT v (ListT m) a }
+    deriving stock Functor
+    deriving newtype MonadIO
 
-instance Monad m => Functor (GeneratorT v m) where
-    fmap = liftM
+instance Monad m => Applicative (GeneratorT v m) where
+    pure = GeneratorT . pure
+    (<*>) = ap
 
 instance Monad m => Monad (GeneratorT v m) where
-    return = GeneratorT . pure
     GeneratorT a >>= f = GeneratorT $ a >>= runGeneratorT . f
 
 instance MonadFail m => MonadFail (GeneratorT v m) where
     fail = lift . fail
-
-instance Monad m => Applicative (GeneratorT v m) where
-    pure = return
-    (<*>) = ap
 
 instance MonadTrans (GeneratorT v) where
     lift = GeneratorT . lift . lift
@@ -60,6 +58,3 @@ yield = modifyRes . cons
 
 breakGenerator :: Monad m => GeneratorT v m a
 breakGenerator = GeneratorT . ContT $ mempty
-
-instance MonadIO m => MonadIO (GeneratorT v m) where
-    liftIO = lift . liftIO

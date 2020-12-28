@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, TypeFamilies, DeriveTraversable #-}
 
 -- | The 'List' class and actions for lists
 
@@ -45,7 +45,7 @@ import Prelude hiding (
 data ListItem l a =
     Nil |
     Cons { headL :: a, tailL :: l a }
-    deriving (Eq, Ord, Read, Show)
+    deriving (Eq, Ord, Read, Show, Functor, Foldable, Traversable)
 
 infixr 5 `cons`
 
@@ -69,10 +69,6 @@ instance List [] where
     runList (x:xs) = Identity $ Cons x xs
     joinL = runIdentity
     cons = (:)
-
-instance Functor m => Functor (ListItem m) where
-    fmap _ Nil = Nil
-    fmap func (Cons x xs) = Cons (func x) (fmap func xs)
 
 -- A "monadic-catamorphism" for lists.
 -- Unlike folds, this only looks at the list head.
