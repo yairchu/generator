@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, TypeFamilies, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, TypeFamilies, UndecidableInstances, ConstraintKinds #-}
 
 -- | Functions for iterating trees.
 -- A 'List' whose underlying monad is also a 'List' is a tree.
@@ -60,10 +60,7 @@ import Data.List.Class (
   sortOn, toList, transformListMonad)
 import Data.Maybe (isNothing)
 
--- | A 'type-class synonym' for Trees.
-class (List t, List (ItemM t)) => Tree t
-instance (List t, List (ItemM t)) => Tree t
-
+type Tree t = (List t, List (ItemM t))
 type TreeT m a = ListT (ListT m) a
 type TreeItemM t = ItemM (ItemM t)
 

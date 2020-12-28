@@ -25,17 +25,12 @@ module Control.Monad.ListT (ListT(..)) where
 
 import Data.List.Class (List(..), ListItem(..), foldrL)
 
-import Control.Applicative (Alternative(..), Applicative(..))
+import Control.Applicative (Alternative(..))
 import Control.Monad (MonadPlus(..), ap)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
-#if MIN_VERSION_base(4,9,0)
-import Data.Semigroup (Semigroup(..))
-#endif
-import Data.Monoid (Monoid(..))
 
-newtype ListT m a =
-    ListT { runListT :: m (ListItem (ListT m) a) }
+newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
 
 deriving instance (Eq (m (ListItem (ListT m) a))) => Eq (ListT m a)
 deriving instance (Ord (m (ListItem (ListT m) a))) => Ord (ListT m a)
@@ -49,16 +44,11 @@ foldrL' consFunc nilFunc =
     where
         step x = pure . consFunc x . joinL
 
-#if MIN_VERSION_base(4,9,0)
 instance Monad m => Semigroup (ListT m a) where
     (<>) = flip (foldrL' cons)
-#endif
 
 instance Monad m => Monoid (ListT m a) where
     mempty = ListT (pure Nil)
-#if !(MIN_VERSION_base(4,11,0))
-    mappend = flip (foldrL' cons)
-#endif
 
 instance Functor m => Functor (ListT m) where
     fmap func (ListT action) =
