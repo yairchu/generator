@@ -50,7 +50,7 @@ instance MonadTrans (GeneratorT v) where
     lift = GeneratorT . lift . lift
 
 generate :: Monad m => GeneratorT v m () -> ListT m v
-generate = (`runContT` const mempty) . runGeneratorT
+generate = (`runContT` mempty) . runGeneratorT
 
 modifyRes :: (ListT m a -> ListT m a) -> GeneratorT a m ()
 modifyRes = GeneratorT . (`mapContT` pure ())
@@ -59,7 +59,7 @@ yield :: Monad m => v -> GeneratorT v m ()
 yield = modifyRes . cons
 
 breakGenerator :: Monad m => GeneratorT v m a
-breakGenerator = GeneratorT . ContT . const $ mempty
+breakGenerator = GeneratorT . ContT $ mempty
 
 instance MonadIO m => MonadIO (GeneratorT v m) where
     liftIO = lift . liftIO

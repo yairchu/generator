@@ -30,9 +30,10 @@ module Data.List.Class (
     ) where
 
 import Control.Applicative (Alternative(..))
-import Control.Monad (MonadPlus(..), join)
+import Control.Monad (MonadPlus(..))
 import Control.Monad.Trans.State (StateT(..), evalStateT, get)
 import Data.Function (fix)
+import Data.Functor ((<&>))
 import Data.Functor.Identity (Identity(..))
 import Data.List (sortBy)
 import Data.Maybe (fromJust)
@@ -251,13 +252,14 @@ transpose :: List l => l (l a) -> l (l a)
 transpose matrix =
     joinL $ toList matrix >>= r
     where
-        r xs = do
-            items <- mapM runList xs
-            pure $ case filter isCons items of
-                [] -> empty
-                citems ->
-                    cons (fromList (map headL citems)) .
-                    joinL . r $ map tailL citems
+        r xs =
+            traverse runList xs <&>
+            \items ->
+            case filter isCons items of
+            [] -> empty
+            citems ->
+                cons (fromList (citems <&> headL)) .
+                joinL . r $ citems <&> tailL
         isCons Nil = False
         isCons _ = True
 
@@ -299,11 +301,7 @@ sortOn = sortBy . comparing
 -- > [[1],[2,3],[4,5,6,7]]
 iterateM :: List l => (a -> ItemM l a) -> ItemM l a -> l a
 iterateM step startM =
-    joinL $ do
-        start <- startM
-        pure . cons start
-            . iterateM step
-            . step $ start
+    joinL (startM <&> \start -> cons start . iterateM step . step $ start)
 
 -- | Monadic variant of splitAt.
 -- Consumes x items from the list and return them with the remaining monadic list.
@@ -342,9 +340,9 @@ splitWhenM cond list = do
 -- The list will fork the state given to it and won't share its changes.
 listStateJoin :: (List l, List k, ItemM l ~ StateT s (ItemM k))
     => l a -> ItemM l (k a)
-listStateJoin list = do
-    start <- get
-    pure . joinL . (`evalStateT` start) $ deconstructList (pure empty) onCons list
+listStateJoin list =
+    get <&>
+    \start -> joinL . (`evalStateT` start) $ deconstructList (pure empty) onCons list
     where
         onCons x = fmap (cons x) . listStateJoin
 
@@ -352,7 +350,7 @@ listStateJoin list = do
 --
 -- For @List l => l (l a) -> l a@ use 'join'
 concat :: (Monad l, List l) => l [a] -> l a
-concat = join . fmap fromList
+concat = (>>= fromList)
 
 -- | Genereralized 'concatMap'
 --
