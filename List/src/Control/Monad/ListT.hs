@@ -24,7 +24,7 @@
 
 module Control.Monad.ListT (ListT(..)) where
 
-import Data.List.Class (List(..), ListItem(..), cons, foldrL)
+import Data.List.Class (List(..), ListItem(..), cons, foldrL')
 
 import Control.Applicative (Alternative(..))
 import Control.Monad (MonadPlus(..), ap)
@@ -37,13 +37,6 @@ newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
     deriving stock (Functor, Foldable, Traversable, Generic)
 
 makeDerivings [''Eq, ''Ord, ''Read, ''Show] [''ListT]
-
--- for <>, fmap, bind
-foldrL' :: List l => (a -> l b -> l b) -> l b -> l a -> l b
-foldrL' consFunc nilFunc =
-    joinL . foldrL step (pure nilFunc)
-    where
-        step x = pure . consFunc x . joinL
 
 instance Monad m => Semigroup (ListT m a) where
     (<>) = flip (foldrL' cons)

@@ -1,11 +1,11 @@
-{-# LANGUAGE FlexibleContexts, TypeFamilies, DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts, TypeFamilies, DeriveTraversable, LambdaCase #-}
 
 -- | The 'List' class and actions for lists
 
 module Data.List.Class (
     -- | The List typeclass
     List (..), ListItem (..), listItem,
-    fromList,
+    fromList, mapListItem,
     -- | List operations for MonadPlus
     cons, filter, catMaybes, mapMaybe,
     -- | List operations for Alternative
@@ -14,7 +14,7 @@ module Data.List.Class (
     take, takeWhile, genericTake, scanl, scanl1,
     transpose, zip, zipWith, tail,
     -- | Non standard List operations
-    foldrL, foldlL, foldl1L, toList, lengthL, lastL,
+    foldrL, foldrL', foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
     -- | Operations useful for monadic lists
     execute, joinL, joinM, mapL, filterL, iterateM, takeWhileM, repeatM,
@@ -78,11 +78,12 @@ deconstructList :: List l => ItemM l r -> (a -> l a -> ItemM l r) -> l a -> Item
 deconstructList onNil onCons list =
     runList list >>= listItem onNil onCons
 
-deconstructList' :: List l => l r -> (a -> l a -> l r) -> l a -> l r
-deconstructList' onNil onCons =
-    joinL . deconstructList (pure onNil) onCons'
-    where
-        onCons' x = pure . onCons x
+-- This could had been a method of a base class to List,
+-- and some functions (take, takeWhile) would only require that base class,
+-- and would work for (ListT f) of Functors.
+-- Will create such a class if a use case for it is found.
+mapListItem :: List l => l r -> (a -> l a -> l r) -> l a -> l r
+mapListItem onNil onCons = joinL . fmap (listItem onNil onCons) . runList
 
 -- | foldr for 'List's.
 -- the result and 'right side' values are monadic actions.
@@ -91,6 +92,10 @@ foldrL consFunc nilFunc =
     deconstructList nilFunc onCons
     where
         onCons x = consFunc x . foldrL consFunc nilFunc
+
+foldrL' :: List l => (a -> l b -> l b) -> l b -> l a -> l b
+foldrL' consFunc nilFunc =
+    mapListItem nilFunc (\x -> consFunc x . foldrL' consFunc nilFunc)
 
 -- | Convert a list to a 'List'
 --
@@ -128,15 +133,15 @@ foldl1L = deconstructList (error "foldl1L: empty list") . foldlL
 
 scanl :: List l => (a -> b -> a) -> a -> l b -> l a
 scanl step startVal =
-    cons startVal . deconstructList' empty (scanl step . step startVal)
+    cons startVal . mapListItem empty (scanl step . step startVal)
 
 scanl1 :: List l => (a -> a -> a) -> l a -> l a
-scanl1 = deconstructList' empty . scanl
+scanl1 = mapListItem empty . scanl
 
 genericTake :: (Integral i, List l) => i -> l a -> l a
 genericTake count
     | count <= 0 = const empty
-    | otherwise = deconstructList' empty onCons
+    | otherwise = mapListItem empty onCons
     where
         onCons x = cons x . genericTake (count - 1)
 
@@ -161,7 +166,12 @@ mapL :: List l => (a -> ItemM l b) -> l a -> l b
 mapL func = joinM . fmap func
 
 takeWhile :: List l => (a -> Bool) -> l a -> l a
-takeWhile = takeWhileM . fmap pure
+takeWhile p =
+    mapListItem empty f
+    where
+        f x xs
+            | p x = cons x (takeWhile p xs)
+            | otherwise = empty
 
 repeatM :: List l => ItemM l a -> l a
 repeatM = joinM . repeat
@@ -170,21 +180,21 @@ filterL :: List l => (a -> ItemM l Bool) -> l a -> l a
 filterL cond =
     joinL . foldrL step (pure empty)
     where
-        step x rest = do
-            b <- cond x
-            if b
-                then pure . cons x . joinL $ rest
-                else rest
+        step x rest =
+            cond x >>=
+            \case
+            True -> pure . cons x . joinL $ rest
+            False -> rest
 
 takeWhileM :: List l => (a -> ItemM l Bool) -> l a -> l a
 takeWhileM cond =
     joinL . foldrL step (pure empty)
     where
-        step x rest = do
-            b <- cond x
-            if b
-                then pure . cons x . joinL $ rest
-                else pure empty
+        step x rest =
+            cond x <&>
+            \case
+            True -> cons x (joinL rest)
+            False -> empty
 
 -- | An action to transform a 'List' to a list
 --
@@ -218,9 +228,9 @@ transformListMonad trans =
 
 zip :: List l => l a -> l b -> l (a, b)
 zip xx yy =
-    deconstructList' empty onConsX xx
+    mapListItem empty onConsX xx
     where
-        onConsX x xs = deconstructList' empty (onConsXY x xs) yy
+        onConsX x xs = mapListItem empty (onConsXY x xs) yy
         onConsXY x xs y ys = cons (x, y) $ zip xs ys
 
 -- zipWith based on zip and not vice versa,
@@ -325,8 +335,9 @@ splitWhenM cond list = do
 -- in the form of the location along the list.
 -- This joins the inner @StateT s@ into the list.
 -- The list will fork the state given to it and won't share its changes.
-listStateJoin :: (List l, List k, ItemM l ~ StateT s (ItemM k))
-    => l a -> ItemM l (k a)
+listStateJoin ::
+    (List l, List k, ItemM l ~ StateT s (ItemM k)) =>
+    l a -> ItemM l (k a)
 listStateJoin list =
     get <&>
     \start -> joinL . (`evalStateT` start) $ deconstructList (pure empty) onCons list
