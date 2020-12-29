@@ -20,3 +20,4 @@ library:
   ghc-options:
   - -O2
   - -Wall
+  - -Wredundant-constraints
