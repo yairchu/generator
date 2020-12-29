@@ -24,7 +24,7 @@
 
 module Control.Monad.ListT (ListT(..)) where
 
-import Data.List.Class (List(..), ListItem(..), foldrL)
+import Data.List.Class (List(..), ListItem(..), cons, foldrL)
 
 import Control.Applicative (Alternative(..))
 import Control.Monad (MonadPlus(..), ap)
@@ -71,7 +71,6 @@ instance Monad m => List (ListT m) where
     type ItemM (ListT m) = m
     runList = runListT
     joinL = ListT . (>>= runList)
-    cons x = ListT . pure . Cons x
 
 instance MonadIO m => MonadIO (ListT m) where
     liftIO = lift . liftIO

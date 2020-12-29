@@ -5,7 +5,7 @@
 module Data.List.Class (
     -- | The List typeclass
     List (..), ListItem (..),
-    fromList,
+    fromList, cons,
     -- | List operations for MonadPlus
     filter,
     -- | Standard list operations
@@ -49,6 +49,9 @@ data ListItem l a =
 
 infixr 5 `cons`
 
+cons :: Alternative f => a -> f a -> f a
+cons = (<|>) . pure
+
 -- | A class for list types.
 -- Every list has an underlying monad.
 class (Alternative l, Monad (ItemM l)) => List l where
@@ -59,16 +62,12 @@ class (Alternative l, Monad (ItemM l)) => List l where
     -- > > joinL $ Identity "hello"
     -- > "hello"
     joinL :: ItemM l (l a) -> l a
-    -- | cons. Can be derived from Alternative but is part of class for performance.
-    cons :: a -> l a -> l a
-    cons = (<|>) . pure
 
 instance List [] where
     type ItemM [] = Identity
     runList [] = Identity Nil
     runList (x:xs) = Identity $ Cons x xs
     joinL = runIdentity
-    cons = (:)
 
 -- A "monadic-catamorphism" for lists.
 -- Unlike folds, this only looks at the list head.
