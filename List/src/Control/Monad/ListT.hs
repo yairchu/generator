@@ -70,7 +70,7 @@ instance MonadTrans ListT where
 instance Monad m => List (ListT m) where
     type ItemM (ListT m) = m
     runList = runListT
-    joinL = ListT . (>>= runList)
+    buildList = ListT
 
 instance MonadIO m => MonadIO (ListT m) where
     liftIO = lift . liftIO

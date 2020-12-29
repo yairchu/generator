@@ -58,7 +58,7 @@ import Data.List (sortOn)
 import Data.List.Class (
   List(..), ListItem(..), cons,
   foldrL, fromList, mergeOn, transpose,
-  toList, transformListMonad)
+  toList, transformListMonad, joinL)
 import Data.Maybe (isNothing)
 
 type Tree t = (List t, List (ItemM t))

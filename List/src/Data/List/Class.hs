@@ -17,7 +17,7 @@ module Data.List.Class (
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
     -- | Operations useful for monadic lists
-    execute, joinM, mapL, filterL, iterateM, takeWhileM, repeatM,
+    execute, joinL, joinM, mapL, filterL, iterateM, takeWhileM, repeatM,
     splitAtM, splitWhenM,
     -- | Convert between List types
     transformListMonad,
@@ -55,17 +55,20 @@ cons = (<|>) . pure
 class (Alternative l, Monad (ItemM l)) => List l where
     type ItemM l :: * -> *
     runList :: l a -> ItemM l (ListItem l a)
-    -- | Transform an action returning a list to the returned list
-    --
-    -- > > joinL $ Identity "hello"
-    -- > "hello"
-    joinL :: ItemM l (l a) -> l a
+    buildList :: ItemM l (ListItem l a) -> l a
+
+-- | Transform an action returning a list to the returned list
+--
+-- > > joinL $ Identity "hello"
+-- > "hello"
+joinL :: List l => ItemM l (l a) -> l a
+joinL = buildList . (>>= runList)
 
 instance List [] where
     type ItemM [] = Identity
     runList [] = Identity Nil
     runList (x:xs) = Identity $ Cons x xs
-    joinL = runIdentity
+    buildList = listItem [] (:) . runIdentity
 
 -- A "monadic-catamorphism" for lists.
 -- Unlike folds, this only looks at the list head.
