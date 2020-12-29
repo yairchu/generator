@@ -18,7 +18,7 @@ Extra-source-files:  CHANGELOG.md
 Library
   hs-Source-Dirs:      src
   Extensions:
-  Build-Depends:       base >= 4.8, transformers >= 0.2
+  Build-Depends:       base >= 4.8, transformers >= 0.2, generic-constraints
   Exposed-modules:     Control.Monad.ListT,
                        Control.Monad.ListT.Funcs,
                        Data.List.Class

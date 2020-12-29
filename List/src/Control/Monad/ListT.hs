@@ -1,4 +1,5 @@
-{-# LANGUAGE CPP, FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, TypeFamilies, UndecidableInstances, DeriveTraversable, DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies, StandaloneDeriving, DeriveTraversable, DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, UndecidableInstances, TypeFamilies #-}
 
 -- | A list monad transformer / a monadic list.
 --
@@ -29,14 +30,13 @@ import Control.Applicative (Alternative(..))
 import Control.Monad (MonadPlus(..), ap)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
+import Generics.Constraints (makeDerivings)
+import GHC.Generics (Generic)
 
 newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
-    deriving stock (Functor, Foldable, Traversable)
+    deriving stock (Functor, Foldable, Traversable, Generic)
 
-deriving instance (Eq (m (ListItem (ListT m) a))) => Eq (ListT m a)
-deriving instance (Ord (m (ListItem (ListT m) a))) => Ord (ListT m a)
-deriving instance (Read (m (ListItem (ListT m) a))) => Read (ListT m a)
-deriving instance (Show (m (ListItem (ListT m) a))) => Show (ListT m a)
+makeDerivings [''Eq, ''Ord, ''Read, ''Show] [''ListT]
 
 -- for mappend, fmap, bind
 foldrL' :: List l => (a -> l b -> l b) -> l b -> l a -> l b
