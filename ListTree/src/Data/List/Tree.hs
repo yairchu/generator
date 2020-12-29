@@ -148,15 +148,15 @@ pruneM cond list = do
 -- >   generate $ do
 -- >     x <- lift [1..]
 -- >     yield (Nothing, x)
--- >     y <- lift [1..]
+-- >     y <- lift [x..]
 -- >     yield (Nothing, x + y)
--- >     z <- lift [1..]
+-- >     z <- lift [y..]
 -- >     yield (Nothing, x + y + z)
 -- >     lift . guard $ x*x + y*y == z*z
 -- >     yield (Just (x, y, z), 0)
 -- >
 -- > > take 10 pythagorianTriplets
--- > [(3,4,5),(4,3,5),(6,8,10),(8,6,10),(5,12,13),(12,5,13),(9,12,15),(12,9,15),(15,8,17),(8,15,17)]
+-- > [(3,4,5),(6,8,10),(5,12,13),(9,12,15),(8,15,17),(12,16,20),(7,24,25),(10,24,26),(15,20,25),(20,21,29)]
 
 bestFirstSearchSortedChildrenOn ::
   (Ord b, Tree t) => (a -> b) -> t a -> ItemM t a

@@ -11,9 +11,9 @@ pythagorianTriplets =
   generate $ do
     x <- lift [1..]
     yield (Nothing, x)
-    y <- lift [1..]
+    y <- lift [x..]
     yield (Nothing, x + y)
-    z <- lift [1..]
+    z <- lift [y..]
     yield (Nothing, x + y + z)
     lift . guard $ x*x + y*y == z*z
     yield (Just (x, y, z), 0)
