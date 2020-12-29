@@ -140,8 +140,7 @@ pruneM cond list = do
 -- > import Data.Maybe
 -- >
 -- > pythagorianTriplets =
--- >   catMaybes .
--- >   fmap fst .
+-- >   mapMaybe fst .
 -- >   bestFirstSearchSortedChildrenOn snd .
 -- >   generate $ do
 -- >     x <- lift [1..]
@@ -150,10 +149,10 @@ pruneM cond list = do
 -- >     yield (Nothing, x + y)
 -- >     z <- lift [1..]
 -- >     yield (Nothing, x + y + z)
--- >     lift . guard $ x^2 + y^2 == z^2
+-- >     lift . guard $ x*x + y*y == z*z
 -- >     yield (Just (x, y, z), 0)
 -- >
--- > > print $ take 10 pythagorianTriplets
+-- > > take 10 pythagorianTriplets
 -- > [(3,4,5),(4,3,5),(6,8,10),(8,6,10),(5,12,13),(12,5,13),(9,12,15),(12,9,15),(15,8,17),(8,15,17)]
 
 bestFirstSearchSortedChildrenOn ::

@@ -6,8 +6,7 @@ import Data.Maybe
 
 pythagorianTriplets :: [(Integer, Integer, Integer)]
 pythagorianTriplets =
-  catMaybes .
-  fmap fst .
+  mapMaybe fst .
   bestFirstSearchSortedChildrenOn snd .
   generate $ do
     x <- lift [1..]
