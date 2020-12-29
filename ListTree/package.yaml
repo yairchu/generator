@@ -10,15 +10,25 @@ maintainer: yairchu@gmail.com
 homepage: http://github.com/yairchu/generator
 stability: experiemental
 
+dependencies:
+- base >= 4.8
+- transformers >= 0.2
+ghc-options:
+- -O2
+- -Wall
+- -Wredundant-constraints
+
 library:
   source-dirs: src
   dependencies:
-  - base >= 4.8
   - directory >= 1.0 && < 2.0
   - filepath >= 1.1 && < 2.0
-  - transformers >= 0.2
   - List >= 0.7.0
-  ghc-options:
-  - -O2
-  - -Wall
-  - -Wredundant-constraints
+
+tests:
+  list-tree-test:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+    - generator
+    - ListTree
