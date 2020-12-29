@@ -56,7 +56,7 @@ import Control.Monad.Trans.State (StateT, get, put)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Data.List (sortOn)
 import Data.List.Class (
-  List(..), ListItem(..), cons,
+  List(..), ListItem(..), cons, mapListItem,
   foldrL, fromList, mergeOn, transpose,
   toList, transformListMonad, joinL)
 import Data.Maybe (isNothing)
@@ -90,31 +90,34 @@ bestFirstSearchOn = search . mergeOn
 
 mergeOnSortedHeads ::
   (Ord b, List l) => (a -> b) -> l (l a) -> l a
-mergeOnSortedHeads f sortedHeads =
+mergeOnSortedHeads f =
   -- naming convention for this func:
   -- fooh = head foo
   -- foot = tail foo
   -- foo_ = foo reconstructed after deconstruction
   -- (reconstructed so that monadic action isn't ran twice)
-  joinL $ step sortedHeads empty $
-  \h t -> step h (mergeOnSortedHeads f t) $
-  \hh ht -> pure . cons hh . mergeOnSortedHeads f $ bury ht t
+  mapListItem empty
+  ( \h t ->
+    mapListItem (mergeOnSortedHeads f t)
+    (\hh ht -> cons hh . mergeOnSortedHeads f $ bury ht t)
+    h
+  )
   where
-    step list onNil onCons = do
-      li <- runList list
-      case li of
-        Nil -> pure onNil
-        Cons x xs -> onCons x xs
-    cache x xs func = func (cons x xs)
+    mapRepack list onHead onTail =
+      mapListItem onHead (\h t -> onTail (cons h t) h) list
     bury a b =
-      joinL $ step a b $
-      \ah at -> cache ah at $
-      \a_ -> step b (cons a_ empty) $
-      \bh bt -> step bh (bury a_ bt) $
-      \bhh bht -> cache bhh bht $
-      \bh_ -> pure $ if f ah <= f bhh
-        then cons a_ . cons bh_ $ bt
-        else cons bh_ . bury a_ $ bt
+      mapRepack a b
+      ( \a_ ah ->
+        mapListItem (pure a_)
+        ( \bh bt ->
+          mapRepack bh (bury a_ bt)
+          ( \bh_ bhh ->
+            if f ah <= f bhh
+            then cons a_ (cons bh_ bt)
+            else cons bh_ (bury a_ bt)
+          )
+        ) b
+      )
 
 -- | Prune a tree or list given a predicate.
 -- Unlike 'takeWhile' which stops a branch where the condition doesn't hold,
