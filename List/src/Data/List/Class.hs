@@ -4,7 +4,7 @@
 
 module Data.List.Class (
     -- | The List typeclass
-    List (..), ListItem (..),
+    List (..), ListItem (..), listItem,
     fromList, cons,
     -- | List operations for MonadPlus
     filter,
@@ -47,6 +47,11 @@ data ListItem l a =
     Cons { headL :: a, tailL :: l a }
     deriving (Eq, Ord, Read, Show, Functor, Foldable, Traversable)
 
+-- | A "catamorphism" for ListItem
+listItem :: r -> (a -> l a -> r) -> ListItem l a -> r
+listItem r _ Nil = r
+listItem _ f (Cons h t) = f h t
+
 infixr 5 `cons`
 
 cons :: Alternative f => a -> f a -> f a
@@ -74,11 +79,8 @@ instance List [] where
 --
 -- Should this be exposed? Needs a good name first..
 deconstructList :: List l => ItemM l r -> (a -> l a -> ItemM l r) -> l a -> ItemM l r
-deconstructList onNil onCons list = do
-    item <- runList list
-    case item of
-        Nil -> onNil
-        Cons x xs -> onCons x xs
+deconstructList onNil onCons list =
+    runList list >>= listItem onNil onCons
 
 deconstructList' :: List l => l r -> (a -> l a -> l r) -> l a -> l r
 deconstructList' onNil onCons =
