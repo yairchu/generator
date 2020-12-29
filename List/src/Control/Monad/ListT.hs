@@ -38,7 +38,7 @@ newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
 
 makeDerivings [''Eq, ''Ord, ''Read, ''Show] [''ListT]
 
--- for mappend, fmap, bind
+-- for <>, fmap, bind
 foldrL' :: List l => (a -> l b -> l b) -> l b -> l a -> l b
 foldrL' consFunc nilFunc =
     joinL . foldrL step (pure nilFunc)
@@ -57,10 +57,10 @@ instance Monad m => Applicative (ListT m) where
 
 instance Monad m => Alternative (ListT m) where
     empty = mempty
-    (<|>) = mappend
+    (<|>) = (<>)
 
 instance Monad m => Monad (ListT m) where
-    a >>= b = foldrL' mappend mempty (fmap b a)
+    a >>= b = foldrL' (<>) mempty (fmap b a)
 
 instance Monad m => MonadPlus (ListT m)
 

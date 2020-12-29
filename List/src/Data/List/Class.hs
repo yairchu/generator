@@ -5,25 +5,20 @@
 module Data.List.Class (
     -- | The List typeclass
     List (..), ListItem (..), listItem,
-    fromList, cons,
+    fromList,
     -- | List operations for MonadPlus
-    filter,
+    cons, filter, catMaybes, mapMaybe,
+    -- | List operations for Alternative
+    repeat, enumFrom, enumFromTo,
     -- | Standard list operations
-    repeat,
     take, takeWhile, genericTake, scanl, scanl1,
-    transpose, zip, zipWith,
-    concat, concatMap,
-    tail,
-    enumFrom, enumFromTo,
-    catMaybes, mapMaybe,
+    transpose, zip, zipWith, tail,
     -- | Non standard List operations
     foldrL, foldlL, foldl1L, toList, lengthL, lastL,
     merge2On, mergeOn,
     -- | Operations useful for monadic lists
     execute, joinM, mapL, filterL, iterateM, takeWhileM, repeatM,
     splitAtM, splitWhenM,
-    -- | Operations for non-monadic lists
-    sortOn,
     -- | Convert between List types
     transformListMonad,
     listStateJoin
@@ -35,9 +30,7 @@ import Control.Monad.Trans.State (StateT(..), evalStateT, get)
 import Data.Function (fix)
 import Data.Functor ((<&>))
 import Data.Functor.Identity (Identity(..))
-import Data.List (sortBy)
 import Data.Maybe (fromJust)
-import Data.Ord (comparing)
 import Prelude hiding (
     concat, concatMap, enumFrom, enumFromTo, filter, repeat, scanl, scanl1,
     tail, take, takeWhile, zip, zipWith)
@@ -242,7 +235,7 @@ tail = joinL . fmap tailL . runList
 lastL :: List l => l a -> ItemM l a
 lastL = fmap fromJust . foldlL (const Just) Nothing
 
-repeat :: List l => a -> l a
+repeat :: Alternative f => a -> f a
 repeat = fix . cons
 
 transpose :: List l => l (l a) -> l (l a)
@@ -283,12 +276,6 @@ merge2On f xx yy =
             (Cons x xs, Nil) -> cons x xs
             (Nil, Cons y ys) -> cons y ys
             (Nil, Nil) -> empty
-
--- sorts require looking at the whole list
--- even before the consumption of the first result element,
--- so they make no sense for monadic lists
-sortOn :: Ord b => (a -> b) -> [a] -> [a]
-sortOn = sortBy . comparing
 
 -- | Monadic version of iterate.
 -- Can be used to produce trees given a children of node function.
@@ -343,32 +330,16 @@ listStateJoin list =
     where
         onCons x = fmap (cons x) . listStateJoin
 
--- | Generalized 'concat'
---
--- For @List l => l (l a) -> l a@ use 'join'
-concat :: (Monad l, List l) => l [a] -> l a
-concat = (>>= fromList)
+catMaybes :: MonadPlus m => m (Maybe a) -> m a
+catMaybes = (>>= maybe empty pure)
 
--- | Genereralized 'concatMap'
---
--- For @List l => (a -> l b) -> l a -> l b@ use '=<<' (monadic bind)
-concatMap :: (Monad l, List l) => (a -> [b]) -> l a -> l b
-concatMap f = concat . fmap f
-
-catMaybes :: (Monad l, List l) => l (Maybe a) -> l a
-catMaybes =
-    concatMap f
-    where
-        f Nothing = empty
-        f (Just x) = pure x
-
-mapMaybe :: (Monad l, List l) => (a -> Maybe b) -> l a -> l b
+mapMaybe :: MonadPlus m => (a -> Maybe b) -> m a -> m b
 mapMaybe f = catMaybes . fmap f
 
-enumFrom :: (List l, Enum a) => a -> l a
+enumFrom :: (Alternative f, Enum a) => a -> f a
 enumFrom x = cons x (enumFrom (succ x))
 
-enumFromTo :: (List l, Enum a) => a -> a -> l a
+enumFromTo :: (Alternative f, Enum a) => a -> a -> f a
 enumFromTo from to
     | fromEnum from > fromEnum to = empty
     | otherwise = cons from (enumFromTo (succ from) to)

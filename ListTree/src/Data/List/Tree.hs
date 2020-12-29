@@ -53,11 +53,12 @@ import Control.Applicative (Alternative(..), liftA2)
 import Control.Monad (MonadPlus(..), guard, join, when)
 import Control.Monad.ListT (ListT(..))
 import Control.Monad.Trans.State (StateT, get, put)
-import Control.Monad.Trans.Class (MonadTrans(lift))
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Data.List (sortOn)
 import Data.List.Class (
   List(..), ListItem(..), cons,
   foldrL, fromList, mergeOn, transpose,
-  sortOn, toList, transformListMonad)
+  toList, transformListMonad)
 import Data.Maybe (isNothing)
 
 type Tree t = (List t, List (ItemM t))
