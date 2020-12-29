@@ -1,0 +1,22 @@
+name: List
+version: 0.7.0
+category: Control
+synopsis: List monad transformer and class
+description: A List monad transformer and a List class. With standard list operations for Lists
+license: BSD3
+license-file: LICENSE
+author: Yair Chuchem
+maintainer: yairchu@gmail.com
+homepage: http://github.com/yairchu/generator
+stability: experiemental
+extra-source-files: CHANGELOG.md
+
+library:
+  source-dirs: src
+  dependencies:
+  - base >= 4.8
+  - transformers >= 0.2
+  - generic-constraints
+  ghc-options:
+  - -O2
+  - -Wall

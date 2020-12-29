@@ -1,0 +1,21 @@
+name: generator
+version: 0.6.0
+category: Control
+synopsis: Python-generators notation for creation of monadic lists
+description: Generator monad transformer to create monadic lists in a manner similar to Python generators.
+license: BSD3
+license-file: LICENSE
+author: Yair Chuchem
+maintainer: yairchu@gmail.com
+homepage: http://github.com/yairchu/generator
+stability: experiemental
+
+library:
+  source-dirs: src
+  dependencies:
+  - base >= 4.8
+  - transformers >= 0.2
+  - List >= 0.7.0
+  ghc-options:
+  - -O2
+  - -Wall

@@ -10,3 +10,4 @@ testProducers
 .stack-work/
 .DS_Store
 /tags
+*.cabal

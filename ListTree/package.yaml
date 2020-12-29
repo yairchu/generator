@@ -1,0 +1,23 @@
+name: ListTree
+version: 0.3.0
+category: Algorithms
+synopsis: Trees and monadic trees expressed as monadic lists where the underlying monad is a list
+description: Directory tree structure expressed as a monadic tree. Searching, pruning, iterating, and processing trees.
+license: BSD3
+license-file: LICENSE
+author: Yair Chuchem
+maintainer: yairchu@gmail.com
+homepage: http://github.com/yairchu/generator
+stability: experiemental
+
+library:
+  source-dirs: src
+  dependencies:
+  - base >= 4.8
+  - directory >= 1.0 && < 2.0
+  - filepath >= 1.1 && < 2.0
+  - transformers >= 0.2
+  - List >= 0.7.0
+  ghc-options:
+  - -O2
+  - -Wall
