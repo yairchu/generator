@@ -24,7 +24,7 @@
 
 module Control.Monad.ListT (ListT(..)) where
 
-import Data.List.Class (List(..), ListItem(..), cons, foldrL')
+import Data.List.Class (List(..), ListItem(..), foldrL')
 
 import Control.Applicative (Alternative(..))
 import Control.Monad (MonadPlus(..), ap)
@@ -39,7 +39,7 @@ newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
 makeDerivings [''Eq, ''Ord, ''Read, ''Show] [''ListT]
 
 instance Monad m => Semigroup (ListT m a) where
-    (<>) = flip (foldrL' cons)
+    (<>) = flip (foldrL' (\x -> ListT . pure . Cons x))
 
 instance Monad m => Monoid (ListT m a) where
     mempty = ListT (pure Nil)
