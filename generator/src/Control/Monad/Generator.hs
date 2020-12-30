@@ -20,11 +20,10 @@ module Control.Monad.Generator (
     GeneratorT(..), generate, yield, breakGenerator
     ) where
 
-import Control.Monad (ap)
-import Control.Monad.IO.Class (MonadIO(..))
+import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Cont (ContT (..), mapContT)
+import Control.Monad.Trans.Cont (ContT(..), mapContT)
 import Data.List.Class (cons)
 
 -- | A monad transformer to create 'List's.
@@ -32,14 +31,7 @@ import Data.List.Class (cons)
 newtype GeneratorT v m a =
     GeneratorT { runGeneratorT :: ContT v (ListT m) a }
     deriving stock Functor
-    deriving newtype MonadIO
-
-instance Monad m => Applicative (GeneratorT v m) where
-    pure = GeneratorT . pure
-    (<*>) = ap
-
-instance Monad m => Monad (GeneratorT v m) where
-    GeneratorT a >>= f = GeneratorT $ a >>= runGeneratorT . f
+    deriving newtype (Applicative, Monad, MonadIO)
 
 instance MonadFail m => MonadFail (GeneratorT v m) where
     fail = lift . fail
