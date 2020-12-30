@@ -136,24 +136,19 @@ pruneM cond list = do
 --
 -- Example: Find smallest Pythagorian Triplets
 --
--- > import Control.Monad
--- > import Control.Monad.Generator
--- > import Control.Monad.Trans.Class
--- > import Data.List.Tree
--- > import Data.Maybe
--- >
 -- > pythagorianTriplets =
--- >   mapMaybe fst .
--- >   bestFirstSearchSortedChildrenOn snd .
+-- > pythagorianTriplets =
+-- >   mapMaybe (^? _Right) .
+-- >   bestFirstSearchSortedChildrenOn (^? _Left) .
 -- >   generate $ do
 -- >     x <- lift [1..]
--- >     yield (Nothing, x)
+-- >     yield (Left x)
 -- >     y <- lift [x..]
--- >     yield (Nothing, x + y)
+-- >     yield (Left (x + y))
 -- >     z <- lift [y..]
--- >     yield (Nothing, x + y + z)
--- >     lift . guard $ x*x + y*y == z*z
--- >     yield (Just (x, y, z), 0)
+-- >     yield (Left (x + y + z))
+-- >     guard $ x*x + y*y == z*z
+-- >     yield (Right (x, y, z))
 -- >
 -- > > take 10 pythagorianTriplets
 -- > [(3,4,5),(6,8,10),(5,12,13),(9,12,15),(8,15,17),(12,16,20),(7,24,25),(10,24,26),(15,20,25),(20,21,29)]

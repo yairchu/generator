@@ -20,6 +20,7 @@ module Control.Monad.Generator (
     GeneratorT(..), generate, yield, breakGenerator
     ) where
 
+import Control.Applicative (Alternative(..))
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -32,6 +33,16 @@ newtype GeneratorT v m a =
     GeneratorT { runGeneratorT :: ContT v (ListT m) a }
     deriving stock Functor
     deriving newtype (Applicative, Monad, MonadIO)
+
+instance Monad m => Semigroup (GeneratorT v m a) where
+    GeneratorT (ContT a) <> GeneratorT (ContT b) = (GeneratorT . ContT) (a <> b)
+
+instance Monad m => Monoid (GeneratorT v m a) where
+    mempty = (GeneratorT . ContT) mempty
+
+instance Monad m => Alternative (GeneratorT v m) where
+    empty = mempty
+    (<|>) = (<>)
 
 instance MonadFail m => MonadFail (GeneratorT v m) where
     fail = lift . fail

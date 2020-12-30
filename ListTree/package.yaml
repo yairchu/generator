@@ -31,4 +31,5 @@ tests:
     source-dirs: test
     dependencies:
     - generator
+    - lens
     - ListTree
