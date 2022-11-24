@@ -31,6 +31,7 @@ import Data.Function (fix)
 import Data.Functor ((<&>))
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromJust)
+import Data.Kind (Type)
 import Prelude hiding (
     concat, concatMap, enumFrom, enumFromTo, filter, repeat, scanl, scanl1,
     tail, take, takeWhile, zip, zipWith)
@@ -53,7 +54,7 @@ cons = (<|>) . pure
 -- | A class for list types.
 -- Every list has an underlying monad.
 class (Alternative l, Monad (ItemM l)) => List l where
-    type ItemM l :: * -> *
+    type ItemM l :: Type -> Type
     runList :: l a -> ItemM l (ListItem l a)
     buildList :: ItemM l (ListItem l a) -> l a
 
