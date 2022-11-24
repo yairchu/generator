@@ -2,4 +2,4 @@ packages:
 - 'List'
 - 'ListTree'
 - 'generator'
-resolver: lts-16.27
+resolver: lts-19.33
