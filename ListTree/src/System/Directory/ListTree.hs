@@ -11,9 +11,9 @@
 -- >     $ directoryTree "."                         -- directory tree starting at "."
 --
 -- Module name System.Directory.Tree is a better fit but it is taken by "directory-tree", a read-directory-tree-in-bulk module.
-
-module System.Directory.ListTree 
-    ( directoryTree, appendPath
+module System.Directory.ListTree
+    ( directoryTree
+    , appendPath
     ) where
 
 import Control.Monad (guard)

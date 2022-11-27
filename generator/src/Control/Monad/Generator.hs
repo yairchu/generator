@@ -1,4 +1,9 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances, DeriveFunctor, DerivingStrategies, GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | A monad transformer for the creation of Lists.
 -- Similar to Python's generators.
@@ -14,24 +19,24 @@
 -- >
 -- > > runIdentity . toList . generate $ hanoi 3 'A' 'B' 'C' :: [(Char, Char)]
 -- > [('A','B'),('A','C'),('B','C'),('A','B'),('C','A'),('C','B'),('A','B')]
---
-
-module Control.Monad.Generator (
-    GeneratorT(..), generate, yield, breakGenerator
+module Control.Monad.Generator
+    ( GeneratorT (..)
+    , generate
+    , yield
+    , breakGenerator
     ) where
 
-import Control.Applicative (Alternative(..))
+import Control.Applicative (Alternative (..))
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.ListT (ListT)
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Cont (ContT(..), mapContT)
+import Control.Monad.Trans.Class (MonadTrans (..))
+import Control.Monad.Trans.Cont (ContT (..), mapContT)
 import Data.List.Class (cons)
 
 -- | A monad transformer to create 'List's.
 -- 'generate' transforms a "GeneratorT v m a" to a "ListT m a".
-newtype GeneratorT v m a =
-    GeneratorT { runGeneratorT :: ContT v (ListT m) a }
-    deriving stock Functor
+newtype GeneratorT v m a = GeneratorT {runGeneratorT :: ContT v (ListT m) a}
+    deriving stock (Functor)
     deriving newtype (Applicative, Monad, MonadIO)
 
 instance Monad m => Semigroup (GeneratorT v m a) where

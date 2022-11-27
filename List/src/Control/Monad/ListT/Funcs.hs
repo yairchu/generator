@@ -2,9 +2,11 @@
 -- This might come useful for type interference.
 --
 -- Functions where the @List@ is an input type and not only the result type do not need special limited versions.
-
 module Control.Monad.ListT.Funcs
-    ( iterateM, repeatM, repeat, fromList
+    ( iterateM
+    , repeatM
+    , repeat
+    , fromList
     ) where
 
 import Control.Monad.ListT (ListT)

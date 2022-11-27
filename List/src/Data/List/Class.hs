@@ -1,44 +1,88 @@
-{-# LANGUAGE FlexibleContexts, TypeFamilies, DeriveTraversable, LambdaCase #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | The 'List' class and actions for lists
-
-module Data.List.Class (
-    -- | The List typeclass
-    List (..), ListItem (..), listItem,
-    fromList, mapListItem,
-    -- | List operations for MonadPlus
-    cons, filter, catMaybes, mapMaybe,
-    -- | List operations for Alternative
-    repeat, enumFrom, enumFromTo,
-    -- | Standard list operations
-    take, takeWhile, genericTake, scanl, scanl1,
-    transpose, zip, zipWith, tail,
-    -- | Non standard List operations
-    foldrL, foldrL', foldlL, foldl1L, toList, lengthL, lastL,
-    merge2On, mergeOn,
-    -- | Operations useful for monadic lists
-    execute, joinL, joinM, mapL, filterL, iterateM, takeWhileM, repeatM,
-    splitAtM, splitWhenM,
-    -- | Convert between List types
-    transformListMonad,
-    listStateJoin
+module Data.List.Class
+    ( -- | The List typeclass
+      List (..)
+    , ListItem (..)
+    , listItem
+    , fromList
+    , mapListItem
+      -- | List operations for MonadPlus
+    , cons
+    , filter
+    , catMaybes
+    , mapMaybe
+      -- | List operations for Alternative
+    , repeat
+    , enumFrom
+    , enumFromTo
+      -- | Standard list operations
+    , take
+    , takeWhile
+    , genericTake
+    , scanl
+    , scanl1
+    , transpose
+    , zip
+    , zipWith
+    , tail
+      -- | Non standard List operations
+    , foldrL
+    , foldrL'
+    , foldlL
+    , foldl1L
+    , toList
+    , lengthL
+    , lastL
+    , merge2On
+    , mergeOn
+      -- | Operations useful for monadic lists
+    , execute
+    , joinL
+    , joinM
+    , mapL
+    , filterL
+    , iterateM
+    , takeWhileM
+    , repeatM
+    , splitAtM
+    , splitWhenM
+      -- | Convert between List types
+    , transformListMonad
+    , listStateJoin
     ) where
 
-import Control.Applicative (Alternative(..))
-import Control.Monad (MonadPlus(..))
-import Control.Monad.Trans.State (StateT(..), evalStateT, get)
+import Control.Applicative (Alternative (..))
+import Control.Monad (MonadPlus (..))
+import Control.Monad.Trans.State (StateT (..), evalStateT, get)
 import Data.Function (fix)
 import Data.Functor ((<&>))
-import Data.Functor.Identity (Identity(..))
-import Data.Maybe (fromJust)
+import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
-import Prelude hiding (
-    concat, concatMap, enumFrom, enumFromTo, filter, repeat, scanl, scanl1,
-    tail, take, takeWhile, zip, zipWith)
+import Data.Maybe (fromJust)
+import Prelude hiding
+    ( concat
+    , concatMap
+    , enumFrom
+    , enumFromTo
+    , filter
+    , repeat
+    , scanl
+    , scanl1
+    , tail
+    , take
+    , takeWhile
+    , zip
+    , zipWith
+    )
 
-data ListItem l a =
-    Nil |
-    Cons { headL :: a, tailL :: l a }
+data ListItem l a
+    = Nil
+    | Cons {headL :: a, tailL :: l a}
     deriving (Eq, Ord, Read, Show, Functor, Foldable, Traversable)
 
 -- | A "catamorphism" for ListItem
@@ -68,7 +112,7 @@ joinL = buildList . (>>= runList)
 instance List [] where
     type ItemM [] = Identity
     runList [] = Identity Nil
-    runList (x:xs) = Identity $ Cons x xs
+    runList (x : xs) = Identity $ Cons x xs
     buildList = listItem [] (:) . runIdentity
 
 -- A "monadic-catamorphism" for lists.
@@ -126,7 +170,7 @@ foldlL step startVal =
     where
         onCons x xs =
             let v = step startVal x
-            in v `seq` foldlL step v xs
+            in  v `seq` foldlL step v xs
 
 foldl1L :: List l => (a -> a -> a) -> l a -> ItemM l a
 -- should use "error" or "fail"?
@@ -182,20 +226,20 @@ filterL cond =
     joinL . foldrL step (pure empty)
     where
         step x rest =
-            cond x >>=
-            \case
-            True -> pure . cons x . joinL $ rest
-            False -> rest
+            cond x
+                >>= \case
+                    True -> pure . cons x . joinL $ rest
+                    False -> rest
 
 takeWhileM :: List l => (a -> ItemM l Bool) -> l a -> l a
 takeWhileM cond =
     joinL . foldrL step (pure empty)
     where
         step x rest =
-            cond x <&>
-            \case
-            True -> cons x (joinL rest)
-            False -> empty
+            cond x
+                <&> \case
+                    True -> cons x (joinL rest)
+                    False -> empty
 
 -- | An action to transform a 'List' to a list
 --
@@ -219,8 +263,11 @@ lengthL = foldlL (const . (+ 1)) 0
 -- > > import Data.List.Tree (bfs)
 -- > > bfs (transformListMonad (\(Identity x) -> [x, x]) "hey" :: ListT [] Char)
 -- > "hheeeeyyyyyyyy"
-transformListMonad :: (List l, List k) =>
-    (ItemM l (k a) -> ItemM k (k a)) -> l a -> k a
+transformListMonad ::
+    (List l, List k) =>
+    (ItemM l (k a) -> ItemM k (k a)) ->
+    l a ->
+    k a
 transformListMonad trans =
     t . foldrL step (pure empty)
     where
@@ -257,13 +304,15 @@ transpose matrix =
     joinL $ toList matrix >>= r
     where
         r xs =
-            traverse runList xs <&>
-            \items ->
-            case filter isCons items of
-            [] -> empty
-            citems ->
-                cons (fromList (citems <&> headL)) .
-                joinL . r $ citems <&> tailL
+            traverse runList xs
+                <&> \items ->
+                    case filter isCons items of
+                        [] -> empty
+                        citems ->
+                            cons (fromList (citems <&> headL))
+                                . joinL
+                                . r
+                                $ citems <&> tailL
         isCons Nil = False
         isCons _ = True
 
@@ -311,8 +360,8 @@ splitAtM at list
         case item of
             Nil -> pure ([], empty)
             Cons x xs -> do
-                (pre, post) <- splitAtM (at-1) xs
-                pure (x:pre, post)
+                (pre, post) <- splitAtM (at - 1) xs
+                pure (x : pre, post)
 
 -- | Monadic variant of break.
 -- Consumes items from the list until a condition holds.
@@ -327,7 +376,7 @@ splitWhenM cond list = do
                 then pure ([], cons x xs)
                 else do
                     (pre, post) <- splitWhenM cond xs
-                    pure (x:pre, post)
+                    pure (x : pre, post)
 
 -- | listStateJoin can transform a
 -- @ListT (StateT s m) a@ to a @StateT s m (ListT m a)@.
@@ -338,10 +387,11 @@ splitWhenM cond list = do
 -- The list will fork the state given to it and won't share its changes.
 listStateJoin ::
     (List l, List k, ItemM l ~ StateT s (ItemM k)) =>
-    l a -> ItemM l (k a)
+    l a ->
+    ItemM l (k a)
 listStateJoin list =
-    get <&>
-    \start -> joinL . (`evalStateT` start) $ deconstructList (pure empty) onCons list
+    get
+        <&> \start -> joinL . (`evalStateT` start) $ deconstructList (pure empty) onCons list
     where
         onCons x = fmap (cons x) . listStateJoin
 

@@ -1,5 +1,11 @@
-{-# LANGUAGE DerivingStrategies, StandaloneDeriving, DeriveTraversable, DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, UndecidableInstances, TypeFamilies #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | A list monad transformer / a monadic list.
 --
@@ -21,19 +27,18 @@
 -- The `transformers` package also has a `ListT` type,
 -- which oddly enough it is not a list monad transformer.
 -- This module was deliberately named differently from `transformers`'s module.
+module Control.Monad.ListT (ListT (..)) where
 
-module Control.Monad.ListT (ListT(..)) where
+import Data.List.Class (List (..), ListItem (..), foldrL')
 
-import Data.List.Class (List(..), ListItem(..), foldrL')
-
-import Control.Applicative (Alternative(..))
-import Control.Monad (MonadPlus(..), ap)
-import Control.Monad.IO.Class (MonadIO(..))
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Generics.Constraints (makeDerivings)
+import Control.Applicative (Alternative (..))
+import Control.Monad (MonadPlus (..), ap)
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Trans.Class (MonadTrans (..))
 import GHC.Generics (Generic)
+import Generics.Constraints (makeDerivings)
 
-newtype ListT m a = ListT { runListT :: m (ListItem (ListT m) a) }
+newtype ListT m a = ListT {runListT :: m (ListItem (ListT m) a)}
     deriving stock (Functor, Foldable, Traversable, Generic)
 
 makeDerivings [''Eq, ''Ord, ''Read, ''Show] [''ListT]
